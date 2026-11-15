@@ -3,7 +3,7 @@
 Checkpoint file. Every session reads this first and updates it with every push.
 Rules for sessions are in `CLAUDE.md`.
 
-**Current phase:** 1 (Brain)
+**Current phase:** 2 (App + Voice)
 **Last updated:** 2026-11-16
 
 ## Phase 0 — Setup
@@ -17,14 +17,24 @@ Rules for sessions are in `CLAUDE.md`.
 
 ## Phase 1 — Brain (desktop core, text chat)
 
-- [ ] LLM provider client (OpenAI-compatible) + router with quota fallback
-- [ ] Permission engine R0–R3, autonomy modes, untrusted-content rule
-- [ ] Tool registry + tools: open_app, open_url, web_search, read_page, get_time, notes
-- [ ] Agent loop with tool calls, approvals, STOP, activity log
-- [ ] Offline intent fallback (open app, time, note) when no LLM is reachable
-- [ ] CLI text chat (`python -m rishu_core`)
-- [ ] Tests: mock-LLM agent flows, 429 fallback, permissions, tools
-- [ ] Acceptance: "Chrome kholo" and "AI news search karo" (with sources) work in text
+- [x] LLM provider client (OpenAI-compatible) + router with quota fallback
+- [x] Permission engine R0–R3, autonomy modes, untrusted-content rule
+- [x] Tool registry + tools: open_app, open_url, web_search, read_page, get_time, notes
+- [x] Agent loop with tool calls, approvals, STOP, activity log
+- [x] Offline intent fallback (open app, time, note) when no LLM is reachable
+- [x] CLI text chat (`python -m rishu_core`)
+- [x] Tests: mock-LLM agent flows, 429 fallback, permissions, tools (77 tests)
+- [x] Acceptance with the scripted model: "Chrome kholo" and "AI news search karo"
+      (with sources) pass in `core/tests/test_agent.py`
+- [ ] Acceptance with a real LLM and a real Windows PC (see "Needs device test")
+
+Phase 1 leftovers to pick up in Phase 2/3:
+- API keys are read from environment variables only; the OS secure store
+  (DPAPI / keyring) comes with onboarding in Phase 2/3.
+- `open_app` indexes Start-menu shortcuts and aliases; Store (UWP) apps without a
+  shortcut need `Get-StartApps` support.
+- Agent is synchronous; the WebSocket server runs it in a worker thread and adds
+  token streaming.
 
 ## Phase 2 — App + Voice (Windows)
 
@@ -40,7 +50,12 @@ See spec §14. Break each phase into checklist items here when it starts.
 
 ## Needs device test (cannot be verified in the cloud workspace)
 
-- Nothing yet.
+- Phase 1 on Windows with a real key: `scripts\dev.ps1`, then "Chrome kholo",
+  "notepad kholo", "AI news search karo", "gitm.edu.in kholo". Check that apps
+  open, sources are named, and Hindi/Hinglish replies read well.
+- Live `ddgs` search and `read_page` against real sites (the workspace blocks
+  outbound web requests, so only mocked transports were tested).
+- Model IDs in `config/models.yaml` against live Groq/Gemini `/models` lists.
 
 ## Known issues
 

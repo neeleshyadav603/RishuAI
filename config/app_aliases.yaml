@@ -34,7 +34,7 @@ windows:
 
 linux:
   chrome: google-chrome
-  browser: xdg-open
+  browser: firefox
   files: nautilus
   terminal: gnome-terminal
   calculator: gnome-calculator
