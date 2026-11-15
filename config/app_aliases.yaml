@@ -1,0 +1,50 @@
+# Spoken names -> launch targets. Keys are matched case-insensitively and fuzzily.
+# A target is an executable name (resolved on PATH / App Paths), a Windows
+# URI scheme ending in ":" (e.g. ms-settings:), or a Start-menu shortcut name.
+windows:
+  chrome: chrome
+  google chrome: chrome
+  क्रोम: chrome
+  edge: msedge
+  browser: msedge
+  notepad: notepad
+  नोटपैड: notepad
+  calculator: calc
+  कैलकुलेटर: calc
+  paint: mspaint
+  file explorer: explorer
+  explorer: explorer
+  files: explorer
+  cmd: cmd
+  terminal: wt
+  powershell: powershell
+  settings: "ms-settings:"
+  सेटिंग्स: "ms-settings:"
+  word: winword
+  excel: excel
+  powerpoint: powerpnt
+  ppt: powerpnt
+  vs code: code
+  vscode: code
+  whatsapp: "whatsapp:"
+  व्हाट्सएप: "whatsapp:"
+  camera: "microsoft.windows.camera:"
+  spotify: "spotify:"
+  task manager: taskmgr
+
+linux:
+  chrome: google-chrome
+  browser: xdg-open
+  files: nautilus
+  terminal: gnome-terminal
+  calculator: gnome-calculator
+  vs code: code
+  vscode: code
+
+darwin:
+  chrome: Google Chrome
+  browser: Safari
+  files: Finder
+  terminal: Terminal
+  calculator: Calculator
+  vs code: Visual Studio Code

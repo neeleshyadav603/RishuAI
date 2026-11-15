@@ -1,0 +1,47 @@
+# LLM providers and models. Model IDs live ONLY here, never in code.
+# The router also asks each provider's /models endpoint which IDs exist and
+# skips configured IDs that are gone. Edit freely; free tiers change often.
+#
+# Roles: fast (intent, chit-chat), smart (planning, tutoring, research),
+#        coder (Self-Update Lab), vision (screenshots).
+
+order: [groq, gemini, openrouter, ollama]
+
+providers:
+  groq:
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+    models:
+      fast: [llama-3.1-8b-instant, openai/gpt-oss-20b]
+      smart: [llama-3.3-70b-versatile, openai/gpt-oss-120b]
+      coder: [openai/gpt-oss-120b, llama-3.3-70b-versatile]
+      vision: []
+
+  gemini:
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai
+    api_key_env: GEMINI_API_KEY
+    models:
+      fast: [gemini-2.5-flash-lite]
+      smart: [gemini-2.5-flash]
+      coder: [gemini-2.5-flash]
+      vision: [gemini-2.5-flash]
+
+  openrouter:
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    models:
+      fast: []
+      smart: []
+      coder: []
+      vision: []
+
+  # Local models through Ollama (desktop only). No key. When the lists are
+  # empty the router uses whatever models Ollama reports as installed.
+  ollama:
+    base_url: http://127.0.0.1:11434/v1
+    local: true
+    models:
+      fast: []
+      smart: []
+      coder: []
+      vision: []

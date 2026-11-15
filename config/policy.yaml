@@ -1,0 +1,27 @@
+# PROTECTED FILE (spec §7). Permission and autonomy policy.
+# Rishu's runtime tools and Self-Update Lab must never write to this file.
+
+# ask_always | smart | trusted_skills
+default_autonomy: smart
+
+# Risk levels:
+#   R0 info        -> run, no confirmation
+#   R1 low         -> run, then say what was done
+#   R2 medium      -> exact preview + explicit approval
+#   R3 high        -> preview + step-up authentication with 2 factors
+# An action proposed after reading untrusted content (web pages, emails,
+# messages, files, imported skills) is raised by one level (R1 and above).
+untrusted_bump: 1
+
+# Never allowed, whatever the user or any content says.
+forbidden_tools:
+  - complete_payment
+  - disable_protections
+  - bulk_message
+  - cloned_voice_outbound
+
+# R3 is never automatic, in any autonomy mode.
+max_auto_risk: 2
+
+agent:
+  max_steps: 8

@@ -1,0 +1,14 @@
+# User-editable defaults. Per-user overrides are stored in the data folder.
+assistant_name: Rishu
+language: auto          # auto | hi | en | hinglish
+script: roman           # roman | devanagari (for Hindi replies)
+user_name: ""
+
+web:
+  search_results: 5
+  page_max_chars: 6000
+  page_max_bytes: 2000000
+  timeout_seconds: 15
+
+history:
+  max_messages: 24
