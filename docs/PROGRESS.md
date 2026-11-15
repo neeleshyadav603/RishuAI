@@ -38,11 +38,40 @@ Phase 1 leftovers to pick up in Phase 2/3:
 
 ## Phase 2 — App + Voice (Windows)
 
+Build pipeline (proven on 2026-11-16, run 43755862637: APK 14 MB, installer 35 MB,
+packaged core passes `--selftest` on Windows):
+- [x] GitHub Actions: Windows build (Flutter + PyInstaller + Inno Setup) → `RishuSetup-x.y.z.exe`
+- [x] GitHub Actions: Android release APK (arm64) with the 30 MB size gate
+- [ ] Commit the platform folders: download the `scaffold-android` and
+      `scaffold-windows` artifacts of the latest "Build apps" run
+      (`gh run download <id> -n scaffold-android -D app/android`, same for windows),
+      commit them, then set the app name "Rishu", the Android permissions and the
+      icons there. Until then CI generates them on every run.
+- [ ] Release workflow: on a `v*` tag, publish the installer and APK to GitHub Releases
+- [ ] Release APK signing with a real keystore from GitHub Secrets (owner must
+      create the secret; until then the APK is signed with the debug key)
+
+Core server:
 - [ ] FastAPI + WebSocket server in the core, implementing `shared/protocol`
-- [ ] Flutter app: home with animated orb, conversation, cards, settings, onboarding
-- [ ] Voice: STT (faster-whisper, Groq option), TTS (edge-tts + offline fallback), hotkey, barge-in
-- [ ] GitHub Actions: Windows build (Flutter + PyInstaller + Inno Setup) → `RishuSetup.exe`
-- [ ] GitHub Actions: Android debug APK from the same app (pipeline check)
+      (agent runs in a worker thread; approvals travel as `tool_call_proposed` /
+      `approval_response`; `stop` calls `Agent.stop()`)
+- [ ] Token streaming from the provider client to `assistant_token` events
+- [ ] The Windows app starts the bundled core (`core\rishu-core.exe`) and connects
+      with a session token on 127.0.0.1
+
+Flutter app (must be highly interactive and polished):
+- [ ] App structure: Riverpod, routing, theme (dark/light), i18n (English, Hindi, Hinglish)
+- [ ] Home with the animated orb reacting to state (idle/listening/thinking/speaking/acting/locked/offline)
+- [ ] Conversation view with streaming text and cards: action confirm, sources, progress, error
+- [ ] Onboarding: language, name, provider + API key with a Test button, permissions
+- [ ] Settings: providers/models, autonomy mode, voice, about
+- [ ] Always-visible STOP while an action runs
+- [ ] Widget tests for cards and screens
+
+Voice:
+- [ ] STT: faster-whisper (local) with Groq Whisper option; Hindi/Hinglish
+- [ ] TTS: edge-tts behind a flag + offline fallback (Piper or SAPI)
+- [ ] Push-to-talk, global hotkey, barge-in
 
 ## Phases 3–10
 

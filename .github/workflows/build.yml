@@ -49,6 +49,14 @@ jobs:
             flutter create --platforms=android --org com.rishuai --project-name rishu "$RUNNER_TEMP/gen"
             cp -r "$RUNNER_TEMP/gen/android" android
           fi
+      - name: Keep the generated scaffolding (to be committed to the repo)
+        if: hashFiles('app/android/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: scaffold-android
+          path: app/android
+          include-hidden-files: true
+          retention-days: 7
       - name: Analyze and test
         working-directory: app
         run: |
@@ -70,11 +78,6 @@ jobs:
           name: rishu-android-${{ env.RISHU_VERSION }}
           path: app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           retention-days: 14
-      - uses: actions/upload-artifact@v4
-        with:
-          name: scaffold-android
-          path: app/android
-          retention-days: 3
 
   windows:
     name: Windows installer
@@ -114,6 +117,14 @@ jobs:
             flutter create --platforms=windows --org com.rishuai --project-name rishu "$RUNNER_TEMP/gen"
             cp -r "$RUNNER_TEMP/gen/windows" windows
           fi
+      - name: Keep the generated scaffolding (to be committed to the repo)
+        if: hashFiles('app/windows/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: scaffold-windows
+          path: app/windows
+          include-hidden-files: true
+          retention-days: 7
       - name: Build the Windows app
         working-directory: app
         run: |
@@ -132,8 +143,3 @@ jobs:
           name: rishu-windows-${{ env.RISHU_VERSION }}
           path: dist-installer/RishuSetup-*.exe
           retention-days: 14
-      - uses: actions/upload-artifact@v4
-        with:
-          name: scaffold-windows
-          path: app/windows
-          retention-days: 3
