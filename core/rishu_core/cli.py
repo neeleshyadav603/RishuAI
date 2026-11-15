@@ -38,16 +38,42 @@ def _print_event(event: dict[str, Any]) -> None:
         print(f"  [failed] {event['summary']}")
 
 
+def selftest() -> int:
+    """Used by the packaged build: prove that config, prompts and optional modules load."""
+    import ddgs  # noqa: F401
+    import trafilatura  # noqa: F401
+
+    from .agent import build_system_prompt
+    from .tools import build_registry
+    from .tools.web import extract_text
+
+    settings = load_settings()
+    assert "Rishu" in build_system_prompt(settings)
+    assert len(build_registry(settings).names()) >= 7
+    sample = (
+        "<html><body><article>"
+        + "<p>Rishu selftest paragraph.</p>" * 20
+        + "</article></body></html>"
+    )
+    assert "Rishu selftest paragraph." in extract_text(sample)
+    print("selftest ok")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="rishu", description="Rishu text chat")
     parser.add_argument("--once", metavar="TEXT", help="run one message and exit")
     parser.add_argument("--autonomy", choices=AUTONOMY_MODES, help="override the autonomy mode")
     parser.add_argument("--offline", action="store_true", help="do not contact any LLM provider")
+    parser.add_argument("--selftest", action="store_true", help="check that this build is complete")
     args = parser.parse_args(argv)
 
     for stream in (sys.stdout, sys.stdin):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
+
+    if args.selftest:
+        return selftest()
 
     settings = load_settings()
     agent = build_agent(

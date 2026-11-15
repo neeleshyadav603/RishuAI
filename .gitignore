@@ -19,3 +19,5 @@ app/.flutter-plugins-dependencies
 # Local Rishu data
 .rishu/
 *.log
+*.spec
+dist-installer/
