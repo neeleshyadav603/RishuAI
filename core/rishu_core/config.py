@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -57,6 +57,10 @@ class Settings:
     models: dict[str, Any]
     policy: dict[str, Any]
     app_aliases: dict[str, Any]
+
+    def with_defaults(self, overrides: dict[str, Any]) -> Settings:
+        """A copy with the user's own settings laid over ``config/defaults.yaml``."""
+        return replace(self, defaults={**self.defaults, **overrides})
 
 
 def load_settings(root: Path | None = None) -> Settings:

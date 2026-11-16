@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import platform
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from ..activity_log import ActivityLog
@@ -48,12 +49,14 @@ def build_agent(
     autonomy: str | None = None,
     on_event: Callable[[dict[str, Any]], None] | None = None,
     use_router: bool = True,
+    home: Path | None = None,
+    streaming: bool = False,
 ) -> Agent:
     settings = settings or load_settings()
     if llm is None and use_router:
         router = LLMRouter.from_settings(settings.models)
         llm = router if router.providers else None
-    home = data_dir()
+    home = home or data_dir()
     language = settings.defaults.get("language", "auto")
     return Agent(
         llm,
@@ -66,4 +69,5 @@ def build_agent(
         max_history=int(settings.defaults.get("history", {}).get("max_messages", 24)),
         language="en" if language == "en" else "hinglish",
         on_event=on_event,
+        streaming=streaming,
     )

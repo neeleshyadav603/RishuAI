@@ -56,8 +56,56 @@ def selftest() -> int:
         + "</article></body></html>"
     )
     assert "Rishu selftest paragraph." in extract_text(sample)
+    _selftest_server(settings)
     print("selftest ok")
     return 0
+
+
+def _selftest_server(settings: Any) -> None:
+    """Start the real server on a free port and run one scripted turn over WebSocket."""
+    import json
+    import secrets
+    import tempfile
+    import threading
+    from pathlib import Path
+
+    from websockets.sync.client import connect
+
+    from .api.runtime import CoreRuntime
+    from .api.serve import HOST, bind_socket, build_server
+    from .llm.mock import ScriptedLLM
+    from .security import MemoryStore
+
+    token = secrets.token_urlsafe(32)
+    with tempfile.TemporaryDirectory() as home:
+        runtime = CoreRuntime(
+            settings,
+            token=token,
+            home=Path(home),
+            secrets=MemoryStore(),
+            llm=ScriptedLLM([[{"name": "get_time", "arguments": {}}], "Selftest reply."]),
+        )
+        sock = bind_socket(0)
+        server = build_server(runtime)
+        thread = threading.Thread(target=server.run, kwargs={"sockets": [sock]}, daemon=True)
+        thread.start()
+        try:
+            url = f"ws://{HOST}:{sock.getsockname()[1]}/ws"
+            headers = {"Authorization": f"Bearer {token}"}
+            with connect(url, additional_headers=headers, open_timeout=20) as ws:
+                assert json.loads(ws.recv(timeout=20))["type"] == "hello"
+                ws.send(json.dumps({"v": 1, "type": "user_message", "text": "time?"}))
+                seen = []
+                while True:
+                    event = json.loads(ws.recv(timeout=20))
+                    seen.append(event["type"])
+                    if event["type"] == "assistant_message":
+                        assert event["text"] == "Selftest reply.", event
+                        break
+                assert "tool_result" in seen and "assistant_token" in seen, seen
+        finally:
+            server.should_exit = True
+            thread.join(timeout=10)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -66,6 +114,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--autonomy", choices=AUTONOMY_MODES, help="override the autonomy mode")
     parser.add_argument("--offline", action="store_true", help="do not contact any LLM provider")
     parser.add_argument("--selftest", action="store_true", help="check that this build is complete")
+    parser.add_argument("--serve", action="store_true", help="run the local server for the app")
+    parser.add_argument("--port", type=int, default=0, help="server port (0 picks a free one)")
+    parser.add_argument(
+        "--exit-with-parent",
+        action="store_true",
+        help="with --serve: stop when stdin closes (the app that started the core is gone)",
+    )
     args = parser.parse_args(argv)
 
     for stream in (sys.stdout, sys.stdin):
@@ -74,6 +129,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.selftest:
         return selftest()
+    if args.serve:
+        from .api import serve
+
+        return serve(args.port, exit_with_parent=args.exit_with_parent)
 
     settings = load_settings()
     agent = build_agent(

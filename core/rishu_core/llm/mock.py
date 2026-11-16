@@ -6,7 +6,7 @@ import copy
 import json
 from typing import Any
 
-from .base import LLMResponse, ToolCall
+from .base import LLMResponse, TokenStream, ToolCall
 
 Step = str | list[dict[str, Any]] | Exception
 
@@ -23,7 +23,11 @@ class ScriptedLLM:
         self.calls: list[dict[str, Any]] = []
 
     def chat(
-        self, role: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+        self,
+        role: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        stream: TokenStream | None = None,
     ) -> LLMResponse:
         self.calls.append({"role": role, "messages": copy.deepcopy(messages), "tools": tools})
         if not self._script:
@@ -32,6 +36,10 @@ class ScriptedLLM:
         if isinstance(step, Exception):
             raise step
         if isinstance(step, str):
+            if stream is not None:
+                # Stream word by word, like a real provider would.
+                for index, word in enumerate(step.split(" ")):
+                    stream.token(word if index == 0 else " " + word)
             return LLMResponse(content=step, provider="mock", model="scripted")
         calls = [
             ToolCall(

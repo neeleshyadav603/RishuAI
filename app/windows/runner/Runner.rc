@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.rishuai" "\0"
-            VALUE "FileDescription", "rishu" "\0"
+            VALUE "CompanyName", "Rishu" "\0"
+            VALUE "FileDescription", "Rishu" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "rishu" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.rishuai. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Rishu. All rights reserved." "\0"
             VALUE "OriginalFilename", "rishu.exe" "\0"
-            VALUE "ProductName", "rishu" "\0"
+            VALUE "ProductName", "Rishu" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

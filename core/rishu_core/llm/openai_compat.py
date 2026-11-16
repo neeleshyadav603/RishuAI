@@ -14,6 +14,7 @@ from .base import (
     ModelNotFound,
     ProviderUnavailable,
     QuotaError,
+    TokenStream,
     ToolCall,
 )
 
@@ -54,18 +55,30 @@ class OpenAICompatClient:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
         temperature: float = 0.4,
+        stream: TokenStream | None = None,
     ) -> LLMResponse:
         body: dict[str, Any] = {"model": model, "messages": messages, "temperature": temperature}
         if tools:
             body["tools"] = tools
             body["tool_choice"] = "auto"
+        if stream is not None:
+            return self._chat_stream(model, body, stream)
         data = self._request("POST", "chat/completions", json=body)
         try:
             message = data["choices"][0]["message"]
         except (KeyError, IndexError, TypeError) as exc:
             raise LLMError(f"{self.name}: unexpected response shape") from exc
+        return LLMResponse(
+            content=message.get("content") or "",
+            tool_calls=self._parse_tool_calls(message.get("tool_calls") or []),
+            provider=self.name,
+            model=data.get("model") or model,
+        )
+
+    @staticmethod
+    def _parse_tool_calls(raw_calls: list[dict[str, Any]]) -> list[ToolCall]:
         calls = []
-        for index, raw in enumerate(message.get("tool_calls") or []):
+        for index, raw in enumerate(raw_calls):
             function = raw.get("function") or {}
             raw_args = function.get("arguments") or "{}"
             parse_error = None
@@ -84,11 +97,68 @@ class OpenAICompatClient:
                     parse_error=parse_error,
                 )
             )
+        return calls
+
+    def _chat_stream(self, model: str, body: dict[str, Any], stream: TokenStream) -> LLMResponse:
+        """Server-sent events: text arrives in ``delta.content``, tool calls in pieces."""
+        body = {**body, "stream": True}
+        content: list[str] = []
+        pieces: dict[int, dict[str, Any]] = {}
+        used_model = model
+        try:
+            with self._http.stream("POST", "chat/completions", json=body) as response:
+                if response.status_code >= 400:
+                    response.read()
+                    self._raise_for_status(response)
+                for line in response.iter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    payload = line[5:].strip()
+                    if not payload or payload == "[DONE]":
+                        continue
+                    try:
+                        chunk = json.loads(payload)
+                    except ValueError:
+                        continue
+                    if not isinstance(chunk, dict):
+                        continue
+                    if chunk.get("error"):
+                        raise ProviderUnavailable(f"{self.name}: the stream reported an error")
+                    used_model = chunk.get("model") or used_model
+                    choices = chunk.get("choices") or []
+                    delta = (choices[0].get("delta") or {}) if choices else {}
+                    text = delta.get("content")
+                    if isinstance(text, str) and text:
+                        content.append(text)
+                        stream.token(text)
+                    for position, raw in enumerate(delta.get("tool_calls") or []):
+                        index = raw.get("index")
+                        slot = pieces.setdefault(
+                            index if isinstance(index, int) else position,
+                            {"id": "", "name": "", "arguments": ""},
+                        )
+                        function = raw.get("function") or {}
+                        slot["id"] = raw.get("id") or slot["id"]
+                        slot["name"] = function.get("name") or slot["name"]
+                        arguments = function.get("arguments")
+                        if isinstance(arguments, str):
+                            slot["arguments"] += arguments
+                        elif isinstance(arguments, dict):
+                            slot["arguments"] = json.dumps(arguments)
+        except httpx.HTTPError as exc:
+            raise ProviderUnavailable(f"{self.name}: {type(exc).__name__}") from exc
+        raw_calls = [
+            {
+                "id": slot["id"],
+                "function": {"name": slot["name"], "arguments": slot["arguments"] or "{}"},
+            }
+            for _, slot in sorted(pieces.items())
+        ]
         return LLMResponse(
-            content=message.get("content") or "",
-            tool_calls=calls,
+            content="".join(content),
+            tool_calls=self._parse_tool_calls(raw_calls),
             provider=self.name,
-            model=data.get("model") or model,
+            model=used_model,
         )
 
     def _request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:

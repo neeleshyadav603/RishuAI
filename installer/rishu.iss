@@ -22,6 +22,11 @@ WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayName=Rishu
+UninstallDisplayIcon={app}\rishu.exe
+SetupIconFile=..\app\windows\runner\resources\app_icon.ico
+; Rishu holds this mutex while it runs, so setup can ask the user to close it first.
+AppMutex=RishuSingleInstance
+CloseApplications=yes
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked

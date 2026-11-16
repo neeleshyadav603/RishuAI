@@ -16,6 +16,7 @@ from .base import (
     LLMResponse,
     ModelNotFound,
     QuotaError,
+    TokenStream,
 )
 from .openai_compat import OpenAICompatClient
 
@@ -120,7 +121,11 @@ class LLMRouter:
         state.cooldown_reason = reason
 
     def chat(
-        self, role: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+        self,
+        role: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        stream: TokenStream | None = None,
     ) -> LLMResponse:
         reasons: list[str] = []
         for state in self.providers:
@@ -136,15 +141,17 @@ class LLMRouter:
                 continue
             for model in models:
                 try:
-                    response = state.client.chat(model, messages, tools)
-                except ModelNotFound as exc:
-                    reasons.append(str(exc) + f" [{model}]")
-                    continue
-                except QuotaError as exc:
-                    self._cool(state, str(exc))
-                    reasons.append(str(exc))
-                    break
+                    response = state.client.chat(model, messages, tools, stream=stream)
                 except LLMError as exc:
+                    # A failed attempt may have streamed part of a reply: discard
+                    # it before the next model or provider starts again.
+                    if stream is not None:
+                        stream.reset()
+                    if isinstance(exc, ModelNotFound):
+                        reasons.append(str(exc) + f" [{model}]")
+                        continue
+                    if isinstance(exc, QuotaError):
+                        self._cool(state, str(exc))
                     reasons.append(str(exc))
                     break
                 response.provider = state.name

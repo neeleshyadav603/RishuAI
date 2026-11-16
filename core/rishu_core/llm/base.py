@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -71,9 +72,40 @@ class LLMResponse:
         return message
 
 
+class TokenStream:
+    """Receives the reply text piece by piece while the model writes it.
+
+    ``reset`` tells the listener to discard what it got for the current reply
+    (the provider failed midway and another one starts again, or the text
+    turned out to be a preamble to tool calls).
+    """
+
+    def __init__(
+        self, on_token: Callable[[str], None], on_reset: Callable[[], None] | None = None
+    ):
+        self._on_token = on_token
+        self._on_reset = on_reset
+        self.emitted = False
+
+    def token(self, text: str) -> None:
+        if text:
+            self.emitted = True
+            self._on_token(text)
+
+    def reset(self) -> None:
+        if self.emitted:
+            self.emitted = False
+            if self._on_reset:
+                self._on_reset()
+
+
 class ChatModel(Protocol):
     """Anything the agent can talk to: the router, or a scripted model in tests."""
 
     def chat(
-        self, role: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+        self,
+        role: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        stream: TokenStream | None = None,
     ) -> LLMResponse: ...

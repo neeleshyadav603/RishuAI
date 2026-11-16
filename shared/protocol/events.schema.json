@@ -2,180 +2,567 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rishu.local/protocol/events.schema.json",
   "title": "Rishu app <-> core event protocol",
-  "description": "Every WebSocket frame is one JSON object with v (protocol version), type and type-specific fields. Direction: a2c = app to core, c2a = core to app.",
+  "description": "Every WebSocket frame is one JSON object with v (protocol version), type and type-specific fields. Direction: a2c = app to core, c2a = core to app. The app connects to ws://127.0.0.1:<port>/ws with the header 'Authorization: Bearer <session token>'. shared/protocol/fixtures.json holds one example of every event; both sides test against it.",
   "type": "object",
-  "required": ["v", "type"],
+  "required": [
+    "v",
+    "type"
+  ],
   "properties": {
-    "v": { "const": 1 },
-    "type": { "type": "string" },
-    "id": { "type": "string", "description": "Optional id to correlate a request with its responses." }
+    "v": {
+      "const": 1
+    },
+    "type": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "description": "Optional id to correlate a request with its responses."
+    }
   },
   "oneOf": [
-    { "$ref": "#/$defs/user_message" },
-    { "$ref": "#/$defs/audio_chunk" },
-    { "$ref": "#/$defs/transcript_partial" },
-    { "$ref": "#/$defs/transcript_final" },
-    { "$ref": "#/$defs/assistant_token" },
-    { "$ref": "#/$defs/assistant_message" },
-    { "$ref": "#/$defs/card" },
-    { "$ref": "#/$defs/tool_call_proposed" },
-    { "$ref": "#/$defs/approval_response" },
-    { "$ref": "#/$defs/auth_required" },
-    { "$ref": "#/$defs/auth_result" },
-    { "$ref": "#/$defs/tool_progress" },
-    { "$ref": "#/$defs/tool_result" },
-    { "$ref": "#/$defs/state_change" },
-    { "$ref": "#/$defs/notice" },
-    { "$ref": "#/$defs/stop" },
-    { "$ref": "#/$defs/error" }
+    {
+      "$ref": "#/$defs/user_message"
+    },
+    {
+      "$ref": "#/$defs/audio_chunk"
+    },
+    {
+      "$ref": "#/$defs/transcript_partial"
+    },
+    {
+      "$ref": "#/$defs/transcript_final"
+    },
+    {
+      "$ref": "#/$defs/assistant_token"
+    },
+    {
+      "$ref": "#/$defs/assistant_message"
+    },
+    {
+      "$ref": "#/$defs/card"
+    },
+    {
+      "$ref": "#/$defs/tool_call_proposed"
+    },
+    {
+      "$ref": "#/$defs/approval_response"
+    },
+    {
+      "$ref": "#/$defs/auth_required"
+    },
+    {
+      "$ref": "#/$defs/auth_result"
+    },
+    {
+      "$ref": "#/$defs/tool_progress"
+    },
+    {
+      "$ref": "#/$defs/tool_result"
+    },
+    {
+      "$ref": "#/$defs/state_change"
+    },
+    {
+      "$ref": "#/$defs/notice"
+    },
+    {
+      "$ref": "#/$defs/stop"
+    },
+    {
+      "$ref": "#/$defs/error"
+    },
+    {
+      "$ref": "#/$defs/hello"
+    },
+    {
+      "$ref": "#/$defs/new_conversation"
+    }
   ],
   "$defs": {
-    "risk": { "enum": ["R0", "R1", "R2", "R3"] },
+    "risk": {
+      "enum": [
+        "R0",
+        "R1",
+        "R2",
+        "R3"
+      ]
+    },
     "user_message": {
       "description": "a2c. Typed text from the user.",
-      "properties": { "type": { "const": "user_message" }, "text": { "type": "string" } },
-      "required": ["text"]
+      "properties": {
+        "type": {
+          "const": "user_message"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ]
     },
     "audio_chunk": {
       "description": "a2c. Microphone audio, 16 kHz mono PCM16, base64. last=true ends the utterance.",
       "properties": {
-        "type": { "const": "audio_chunk" },
-        "data": { "type": "string" },
-        "last": { "type": "boolean" }
+        "type": {
+          "const": "audio_chunk"
+        },
+        "data": {
+          "type": "string"
+        },
+        "last": {
+          "type": "boolean"
+        }
       },
-      "required": ["data"]
+      "required": [
+        "data"
+      ]
     },
     "transcript_partial": {
       "description": "c2a. Live speech-to-text while the user speaks.",
-      "properties": { "type": { "const": "transcript_partial" }, "text": { "type": "string" } },
-      "required": ["text"]
+      "properties": {
+        "type": {
+          "const": "transcript_partial"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ]
     },
     "transcript_final": {
       "description": "c2a. Final speech-to-text for the utterance.",
       "properties": {
-        "type": { "const": "transcript_final" },
-        "text": { "type": "string" },
-        "language": { "type": "string" }
+        "type": {
+          "const": "transcript_final"
+        },
+        "text": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        }
       },
-      "required": ["text"]
+      "required": [
+        "text"
+      ]
     },
     "assistant_token": {
-      "description": "c2a. Streamed piece of the assistant reply.",
-      "properties": { "type": { "const": "assistant_token" }, "text": { "type": "string" } },
-      "required": ["text"]
+      "description": "c2a. Streamed piece of the assistant reply. reset=true: discard the text streamed so far for this reply (it was a preamble to an action, or the provider changed midway).",
+      "properties": {
+        "type": {
+          "const": "assistant_token"
+        },
+        "text": {
+          "type": "string"
+        },
+        "reset": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "text"
+      ]
     },
     "assistant_message": {
       "description": "c2a. Complete assistant reply for the turn.",
       "properties": {
-        "type": { "const": "assistant_message" },
-        "text": { "type": "string" },
-        "provider": { "type": "string" },
-        "model": { "type": "string" }
+        "type": {
+          "const": "assistant_message"
+        },
+        "text": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        }
       },
-      "required": ["text"]
+      "required": [
+        "text"
+      ]
     },
     "card": {
       "description": "c2a. Rich card for the conversation view.",
       "properties": {
-        "type": { "const": "card" },
-        "card": {
-          "enum": ["sources", "action_confirm", "progress", "quiz", "flashcard", "notes", "diff_review", "error"]
+        "type": {
+          "const": "card"
         },
-        "data": { "type": "object" }
+        "card": {
+          "enum": [
+            "sources",
+            "action_confirm",
+            "progress",
+            "quiz",
+            "flashcard",
+            "notes",
+            "diff_review",
+            "error"
+          ]
+        },
+        "data": {
+          "type": "object"
+        }
       },
-      "required": ["card", "data"]
+      "required": [
+        "card",
+        "data"
+      ]
     },
     "tool_call_proposed": {
       "description": "c2a. An action that needs the user's decision. The app answers with approval_response.",
       "properties": {
-        "type": { "const": "tool_call_proposed" },
-        "call_id": { "type": "string" },
-        "tool": { "type": "string" },
-        "args": { "type": "object" },
-        "risk": { "$ref": "#/$defs/risk" },
-        "decision": { "enum": ["confirm", "step_up"] },
-        "preview": { "type": "string", "description": "Plain-language description of exactly what will happen." },
-        "reason": { "type": "string" }
+        "type": {
+          "const": "tool_call_proposed"
+        },
+        "call_id": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "args": {
+          "type": "object"
+        },
+        "risk": {
+          "$ref": "#/$defs/risk"
+        },
+        "decision": {
+          "enum": [
+            "confirm",
+            "step_up"
+          ]
+        },
+        "preview": {
+          "type": "string",
+          "description": "Plain-language description of exactly what will happen."
+        },
+        "reason": {
+          "type": "string"
+        },
+        "skill": {
+          "type": "string",
+          "description": "Set when the tool belongs to a skill (enables 'Always allow')."
+        }
       },
-      "required": ["call_id", "tool", "args", "risk", "decision", "preview"]
+      "required": [
+        "call_id",
+        "tool",
+        "args",
+        "risk",
+        "decision",
+        "preview"
+      ]
     },
     "approval_response": {
       "description": "a2c. The user's answer to tool_call_proposed.",
       "properties": {
-        "type": { "const": "approval_response" },
-        "call_id": { "type": "string" },
-        "approved": { "type": "boolean" },
-        "always_allow": { "type": "boolean", "description": "Mark this skill as trusted (never applies to R3)." }
+        "type": {
+          "const": "approval_response"
+        },
+        "call_id": {
+          "type": "string"
+        },
+        "approved": {
+          "type": "boolean"
+        },
+        "always_allow": {
+          "type": "boolean",
+          "description": "Mark this skill as trusted (never applies to R3)."
+        }
       },
-      "required": ["call_id", "approved"]
+      "required": [
+        "call_id",
+        "approved"
+      ]
     },
     "auth_required": {
       "description": "c2a. Unlock or step-up authentication is needed.",
       "properties": {
-        "type": { "const": "auth_required" },
-        "purpose": { "enum": ["unlock", "step_up"] },
-        "factors": { "type": "array", "items": { "enum": ["pin", "face", "fingerprint", "voice"] } },
-        "needed": { "type": "integer", "minimum": 1 },
-        "call_id": { "type": "string" }
+        "type": {
+          "const": "auth_required"
+        },
+        "purpose": {
+          "enum": [
+            "unlock",
+            "step_up"
+          ]
+        },
+        "factors": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "pin",
+              "face",
+              "fingerprint",
+              "voice"
+            ]
+          }
+        },
+        "needed": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "call_id": {
+          "type": "string"
+        }
       },
-      "required": ["purpose", "factors", "needed"]
+      "required": [
+        "purpose",
+        "factors",
+        "needed"
+      ]
     },
     "auth_result": {
       "description": "Both directions. a2c carries a factor attempt; c2a carries the outcome.",
       "properties": {
-        "type": { "const": "auth_result" },
-        "factor": { "enum": ["pin", "face", "fingerprint", "voice"] },
-        "ok": { "type": "boolean" },
-        "payload": { "type": "object" }
+        "type": {
+          "const": "auth_result"
+        },
+        "factor": {
+          "enum": [
+            "pin",
+            "face",
+            "fingerprint",
+            "voice"
+          ]
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "payload": {
+          "type": "object"
+        }
       }
     },
     "tool_progress": {
       "description": "c2a. Live step of a running plan.",
       "properties": {
-        "type": { "const": "tool_progress" },
-        "call_id": { "type": "string" },
-        "tool": { "type": "string" },
-        "status": { "enum": ["started", "running", "done", "denied", "failed"] },
-        "message": { "type": "string" }
+        "type": {
+          "const": "tool_progress"
+        },
+        "call_id": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "started",
+            "running",
+            "done",
+            "denied",
+            "failed"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
       },
-      "required": ["tool", "status"]
+      "required": [
+        "tool",
+        "status"
+      ]
     },
     "tool_result": {
       "description": "c2a. Result summary of a tool call.",
       "properties": {
-        "type": { "const": "tool_result" },
-        "call_id": { "type": "string" },
-        "tool": { "type": "string" },
-        "ok": { "type": "boolean" },
-        "summary": { "type": "string" }
+        "type": {
+          "const": "tool_result"
+        },
+        "call_id": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "summary": {
+          "type": "string"
+        }
       },
-      "required": ["tool", "ok"]
+      "required": [
+        "tool",
+        "ok"
+      ]
     },
     "state_change": {
       "description": "c2a. Orb state.",
       "properties": {
-        "type": { "const": "state_change" },
-        "state": { "enum": ["idle", "listening", "thinking", "speaking", "acting", "locked", "offline"] }
+        "type": {
+          "const": "state_change"
+        },
+        "state": {
+          "enum": [
+            "idle",
+            "listening",
+            "thinking",
+            "speaking",
+            "acting",
+            "locked",
+            "offline"
+          ]
+        }
       },
-      "required": ["state"]
+      "required": [
+        "state"
+      ]
     },
     "notice": {
       "description": "c2a. Short information for the user, e.g. a provider fallback.",
-      "properties": { "type": { "const": "notice" }, "text": { "type": "string" } },
-      "required": ["text"]
+      "properties": {
+        "type": {
+          "const": "notice"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ]
     },
     "stop": {
       "description": "a2c. Emergency stop: cancel the running plan and speech now.",
-      "properties": { "type": { "const": "stop" } }
+      "properties": {
+        "type": {
+          "const": "stop"
+        }
+      }
     },
     "error": {
       "description": "c2a. Something failed; message is safe to show.",
       "properties": {
-        "type": { "const": "error" },
-        "code": { "type": "string" },
-        "message": { "type": "string" }
+        "type": {
+          "const": "error"
+        },
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
       },
-      "required": ["message"]
+      "required": [
+        "message"
+      ]
+    },
+    "hello": {
+      "description": "c2a. First event on every connection: what this core is and how it is set up.",
+      "properties": {
+        "type": {
+          "const": "hello"
+        },
+        "protocol": {
+          "type": "integer"
+        },
+        "version": {
+          "type": "string"
+        },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "user_name": {
+              "type": "string"
+            },
+            "language": {
+              "enum": [
+                "auto",
+                "hi",
+                "en",
+                "hinglish"
+              ]
+            },
+            "script": {
+              "enum": [
+                "roman",
+                "devanagari"
+              ]
+            },
+            "autonomy": {
+              "enum": [
+                "ask_always",
+                "smart",
+                "trusted_skills"
+              ]
+            },
+            "streaming": {
+              "type": "boolean"
+            },
+            "speak_replies": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "user_name",
+            "language",
+            "script",
+            "autonomy"
+          ]
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "local": {
+                "type": "boolean"
+              },
+              "key_url": {
+                "type": "string"
+              },
+              "configured": {
+                "type": "boolean"
+              },
+              "key_source": {
+                "enum": [
+                  "saved",
+                  "env",
+                  null
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "label",
+              "local",
+              "configured"
+            ]
+          }
+        },
+        "capabilities": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "protocol",
+        "version",
+        "settings",
+        "providers",
+        "capabilities"
+      ]
+    },
+    "new_conversation": {
+      "description": "a2c. Forget the current conversation and start a fresh one.",
+      "properties": {
+        "type": {
+          "const": "new_conversation"
+        }
+      }
     }
   }
 }

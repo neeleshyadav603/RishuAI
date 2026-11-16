@@ -12,3 +12,13 @@ web:
 
 history:
   max_messages: 24
+
+# Show the reply while the model is still writing it.
+streaming: true
+# Read replies aloud (when a voice is available).
+speak_replies: true
+
+server:
+  # Seconds the user has to answer an approval card before it counts as "no".
+  approval_timeout_seconds: 120
+  max_message_chars: 8000

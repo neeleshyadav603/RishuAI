@@ -9,7 +9,7 @@ from typing import Any, Protocol
 
 from .. import offline
 from ..activity_log import ActivityLog
-from ..llm import AllProvidersFailed, ChatModel, LLMError, ToolCall
+from ..llm import AllProvidersFailed, ChatModel, LLMError, TokenStream, ToolCall
 from ..permissions import Decision, PermissionEngine, Risk
 from ..strings import t
 from ..tools import ToolRegistry, ToolResult
@@ -55,6 +55,10 @@ class TurnResult:
     offline: bool = False
 
 
+class _StopTurn(Exception):
+    """Raised inside a streamed reply when the user pressed STOP."""
+
+
 def wrap_untrusted(content: str, source: str) -> str:
     """Mark outside content as data so the model does not treat it as instructions."""
     safe = content.replace("</untrusted_content", "</untrusted-content")
@@ -77,6 +81,7 @@ class Agent:
         max_history: int = 24,
         language: str = "hinglish",
         on_event: Callable[[Event], None] | None = None,
+        streaming: bool = False,
     ):
         self.llm = llm
         self.registry = registry
@@ -89,6 +94,8 @@ class Agent:
         self.max_history = max_history
         self.language = language
         self.on_event = on_event
+        # When true, reply text is sent as assistant_token events while it is written.
+        self.streaming = streaming
         self.history: list[dict[str, Any]] = []
         self._stop = threading.Event()
 
@@ -110,6 +117,7 @@ class Agent:
         emit({"type": "state_change", "state": "thinking"})
         self.history.append({"role": "user", "content": text})
         tainted = False  # untrusted content was read earlier in this turn
+        stream = self._token_stream(emit) if self.streaming else None
 
         try:
             for _ in range(self.max_steps):
@@ -118,10 +126,18 @@ class Agent:
                 if self.llm is None:
                     raise AllProvidersFailed([])
                 messages = [{"role": "system", "content": self.system_prompt}, *self.history]
-                response = self.llm.chat(self.role, messages, self.registry.schemas())
+                if stream is not None:
+                    stream.emitted = False
+                    response = self.llm.chat(
+                        self.role, messages, self.registry.schemas(), stream=stream
+                    )
+                else:
+                    response = self.llm.chat(self.role, messages, self.registry.schemas())
                 if response.note:
                     emit({"type": "notice", "text": response.note})
                 self.history.append(response.to_message())
+                if response.tool_calls and stream is not None:
+                    stream.reset()  # the text so far was only a preamble to the tool calls
                 if not response.tool_calls:
                     result.reply = response.content.strip()
                     emit(
@@ -148,12 +164,26 @@ class Agent:
                     )
                 emit({"type": "state_change", "state": "thinking"})
             return self._finish(result, t("max_steps", self.language), emit)
+        except _StopTurn:
+            if stream is not None:
+                stream.reset()
+            return self._finish(result, t("stopped", self.language), emit)
         except AllProvidersFailed as exc:
             return self._offline_turn(text, exc, result, emit)
         except LLMError as exc:
             return self._offline_turn(text, AllProvidersFailed([str(exc)]), result, emit)
 
     # ---- pieces --------------------------------------------------------
+
+    def _token_stream(self, emit: Callable[[Event], None]) -> TokenStream:
+        def on_token(text: str) -> None:
+            if self._stop.is_set():
+                raise _StopTurn
+            emit({"type": "assistant_token", "text": text})
+
+        return TokenStream(
+            on_token, lambda: emit({"type": "assistant_token", "text": "", "reset": True})
+        )
 
     def _emitter(self, result: TurnResult) -> Callable[[Event], None]:
         def emit(event: Event) -> None:
@@ -220,18 +250,19 @@ class Agent:
                 emit,
             )
         if verdict.decision in (Decision.CONFIRM, Decision.STEP_UP):
-            emit(
-                {
-                    "type": "tool_call_proposed",
-                    "call_id": call.id,
-                    "tool": tool.name,
-                    "args": args,
-                    "risk": verdict.risk.label,
-                    "decision": verdict.decision.value,
-                    "preview": request.preview,
-                    "reason": verdict.reason,
-                }
-            )
+            proposal: Event = {
+                "type": "tool_call_proposed",
+                "call_id": call.id,
+                "tool": tool.name,
+                "args": args,
+                "risk": verdict.risk.label,
+                "decision": verdict.decision.value,
+                "preview": request.preview,
+                "reason": verdict.reason,
+            }
+            if tool.skill:
+                proposal["skill"] = tool.skill
+            emit(proposal)
             if verdict.decision == Decision.CONFIRM:
                 approved, approval = self.approver.confirm(request), "user_confirm"
             else:

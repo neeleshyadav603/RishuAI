@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Rishu talks to the AI provider the user chose (their own API key) and reads web pages. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="rishu"
+        android:label="Rishu"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

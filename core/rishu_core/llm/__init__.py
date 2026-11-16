@@ -7,6 +7,7 @@ from .base import (
     ModelNotFound,
     ProviderUnavailable,
     QuotaError,
+    TokenStream,
     ToolCall,
 )
 from .router import LLMRouter
@@ -21,5 +22,6 @@ __all__ = [
     "ModelNotFound",
     "ProviderUnavailable",
     "QuotaError",
+    "TokenStream",
     "ToolCall",
 ]

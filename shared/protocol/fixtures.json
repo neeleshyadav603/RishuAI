@@ -1,0 +1,230 @@
+[
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "user_message",
+      "text": "Rishu, Chrome kholo"
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "audio_chunk",
+      "data": "AAAA",
+      "last": true
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "approval_response",
+      "call_id": "call_1",
+      "approved": true,
+      "always_allow": false
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "stop"
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "new_conversation"
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "hello",
+      "protocol": 1,
+      "version": "0.1.0",
+      "settings": {
+        "user_name": "Neelesh",
+        "language": "hinglish",
+        "script": "roman",
+        "autonomy": "smart",
+        "streaming": true,
+        "speak_replies": true
+      },
+      "providers": [
+        {
+          "name": "groq",
+          "label": "Groq",
+          "local": false,
+          "key_url": "https://console.groq.com/keys",
+          "configured": true,
+          "key_source": "saved"
+        },
+        {
+          "name": "ollama",
+          "label": "Ollama (local)",
+          "local": true,
+          "key_url": "https://ollama.com/download",
+          "configured": true,
+          "key_source": null
+        }
+      ],
+      "capabilities": {
+        "step_up": false,
+        "secure_store": "dpapi",
+        "keys_persist": true
+      }
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "state_change",
+      "state": "thinking"
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "transcript_partial",
+      "text": "Rishu chrome"
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "transcript_final",
+      "text": "Rishu, Chrome kholo",
+      "language": "hi"
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "assistant_token",
+      "text": "Chrome "
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "assistant_token",
+      "text": "",
+      "reset": true
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "assistant_message",
+      "text": "Chrome khol diya.",
+      "provider": "groq",
+      "model": "some-model"
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "tool_call_proposed",
+      "call_id": "call_1",
+      "tool": "send_message",
+      "args": {
+        "to": "Rahul",
+        "text": "10 minute late hoon"
+      },
+      "risk": "R2",
+      "decision": "confirm",
+      "preview": "Send to Rahul: 10 minute late hoon",
+      "reason": "R2 action"
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "tool_progress",
+      "call_id": "call_1",
+      "tool": "open_app",
+      "status": "started",
+      "message": "Open the app 'chrome'"
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "tool_result",
+      "call_id": "call_1",
+      "tool": "open_app",
+      "ok": true,
+      "summary": "Opened chrome."
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "card",
+      "card": "sources",
+      "data": {
+        "items": [
+          {
+            "title": "AI news today",
+            "url": "https://example.com/ai"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "notice",
+      "text": "Using gemini because: groq: rate limit or quota reached (429)"
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "auth_required",
+      "purpose": "step_up",
+      "factors": [
+        "pin",
+        "face"
+      ],
+      "needed": 2,
+      "call_id": "call_2"
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "auth_result",
+      "factor": "pin",
+      "ok": true
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "error",
+      "code": "busy",
+      "message": "Rishu is still working on the previous message."
+    }
+  }
+]

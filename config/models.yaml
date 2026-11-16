@@ -4,11 +4,14 @@
 #
 # Roles: fast (intent, chit-chat), smart (planning, tutoring, research),
 #        coder (Self-Update Lab), vision (screenshots).
+# label and key_url are shown in the app's setup screen (where to get a free key).
 
 order: [groq, gemini, openrouter, ollama]
 
 providers:
   groq:
+    label: Groq
+    key_url: https://console.groq.com/keys
     base_url: https://api.groq.com/openai/v1
     api_key_env: GROQ_API_KEY
     models:
@@ -18,6 +21,8 @@ providers:
       vision: []
 
   gemini:
+    label: Google Gemini
+    key_url: https://aistudio.google.com/apikey
     base_url: https://generativelanguage.googleapis.com/v1beta/openai
     api_key_env: GEMINI_API_KEY
     models:
@@ -27,6 +32,8 @@ providers:
       vision: [gemini-2.5-flash]
 
   openrouter:
+    label: OpenRouter
+    key_url: https://openrouter.ai/keys
     base_url: https://openrouter.ai/api/v1
     api_key_env: OPENROUTER_API_KEY
     models:
@@ -38,6 +45,8 @@ providers:
   # Local models through Ollama (desktop only). No key. When the lists are
   # empty the router uses whatever models Ollama reports as installed.
   ollama:
+    label: Ollama (local)
+    key_url: https://ollama.com/download
     base_url: http://127.0.0.1:11434/v1
     local: true
     models:
