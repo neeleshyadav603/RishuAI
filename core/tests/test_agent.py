@@ -105,6 +105,43 @@ def test_search_answer_keeps_sources_and_marks_them_untrusted(settings, registry
     assert tool_message.startswith('<untrusted_content source="web_search">')
     assert "https://example.com/ai" in tool_message
     assert tool_message.rstrip().endswith("</untrusted_content>")
+    # The app gets the same pages as a SourcesCard.
+    cards = [e for e in result.events if e["type"] == "card"]
+    assert cards == [
+        {
+            "v": 1,
+            "type": "card",
+            "card": "sources",
+            "data": {
+                "tool": "web_search",
+                "items": [
+                    {"title": "AI news today", "url": "https://example.com/ai"},
+                    {"title": "More AI", "url": "https://example.org/more"},
+                ],
+            },
+        }
+    ]
+
+
+def test_sources_keep_only_web_links_and_clean_titles():
+    from rishu_core.agent.loop import MAX_SOURCES, sources_of
+
+    rows = [
+        {"title": "  Good \n page ", "url": "https://example.com/a"},
+        {"title": "Script link", "url": "javascript:alert(1)"},
+        {"title": "File link", "url": "file:///C:/secret.txt"},
+        {"title": "No link"},
+        "not a row",
+    ]
+    assert sources_of(ToolResult(True, "x", data=rows)) == [
+        {"title": "Good page", "url": "https://example.com/a"}
+    ]
+    assert sources_of(ToolResult(True, "x", data={"url": "http://example.com", "title": None})) == [
+        {"title": "", "url": "http://example.com"}
+    ]
+    assert sources_of(ToolResult(True, "x", data=None)) == []
+    many = [{"title": str(i), "url": f"https://example.com/{i}"} for i in range(50)]
+    assert len(sources_of(ToolResult(True, "x", data=many))) == MAX_SOURCES
 
 
 def test_r2_action_needs_approval_and_denial_is_respected(settings, registry, tmp_path):

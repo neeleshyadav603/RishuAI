@@ -15,6 +15,7 @@ from ..strings import t
 from ..tools import ToolRegistry, ToolResult
 
 MAX_TOOL_OUTPUT = 8000
+MAX_SOURCES = 10
 Event = dict[str, Any]
 
 
@@ -57,6 +58,24 @@ class TurnResult:
 
 class _StopTurn(Exception):
     """Raised inside a streamed reply when the user pressed STOP."""
+
+
+def sources_of(outcome: ToolResult) -> list[dict[str, str]]:
+    """Web pages behind a tool result, for the SourcesCard (spec §8.7: always name sources).
+
+    Titles come from the web, so they are display text only; only http(s) links are kept.
+    """
+    rows = outcome.data if isinstance(outcome.data, list) else [outcome.data]
+    items: list[dict[str, str]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        url = row.get("url")
+        if not isinstance(url, str) or not url.startswith(("http://", "https://")):
+            continue
+        title = " ".join(str(row.get("title") or "").split())
+        items.append({"title": title[:200], "url": url[:2000]})
+    return items[:MAX_SOURCES]
 
 
 def wrap_untrusted(content: str, source: str) -> str:
@@ -301,6 +320,16 @@ class Agent:
                 "summary": outcome.content[:200],
             }
         )
+        if tool.untrusted_output and outcome.ok:
+            sources = sources_of(outcome)
+            if sources:
+                emit(
+                    {
+                        "type": "card",
+                        "card": "sources",
+                        "data": {"tool": tool.name, "items": sources},
+                    }
+                )
         self._record(request, approval, outcome.ok, result)
         return outcome
 

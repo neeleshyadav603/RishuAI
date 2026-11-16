@@ -76,7 +76,8 @@
       "capabilities": {
         "step_up": false,
         "secure_store": "dpapi",
-        "keys_persist": true
+        "keys_persist": true,
+        "approval_timeout_seconds": 120.0
       }
     }
   },
@@ -178,6 +179,7 @@
       "type": "card",
       "card": "sources",
       "data": {
+        "tool": "web_search",
         "items": [
           {
             "title": "AI news today",

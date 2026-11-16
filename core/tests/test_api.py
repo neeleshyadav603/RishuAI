@@ -140,6 +140,7 @@ def test_hello_then_a_streamed_turn_with_a_tool(settings, registry, tmp_path, sp
         assert hello["settings"]["autonomy"] == "smart"
         assert [p["name"] for p in hello["providers"]] == ["groq", "gemini", "openrouter", "ollama"]
         assert hello["capabilities"]["step_up"] is False
+        assert hello["capabilities"]["approval_timeout_seconds"] == 120
         say(ws, "Rishu, Chrome kholo")
         events = read_turn(ws)
     kinds = [e["type"] for e in events]

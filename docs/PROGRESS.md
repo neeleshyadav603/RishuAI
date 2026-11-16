@@ -24,7 +24,7 @@ Rules for sessions are in `CLAUDE.md`.
 - [x] Offline intent fallback (open app, time, note) when no LLM is reachable
 - [x] CLI text chat (`python -m rishu_core`)
 - [x] Tests: mock-LLM agent flows, 429 fallback, permissions, tools (77 tests then;
-      156 with the Phase 2 server)
+      158 with the Phase 2 server)
 - [x] Acceptance with the scripted model: "Chrome kholo" and "AI news search karo"
       (with sources) pass in `core/tests/test_agent.py`
 - [ ] Acceptance with a real LLM and a real Windows PC (see "Needs device test")
@@ -68,6 +68,9 @@ Core server (`core/rishu_core/api/`, started with `rishu-core --serve`):
       validation; a change applies to the running conversation
 - [x] Contract tests: every event the core sends is checked against the JSON
       schema; `shared/protocol/fixtures.json` is shared with the Dart tests
+- [x] `sources` card after `web_search` / `read_page` (title + link of every page
+      used; only http(s) links), and `hello` tells the app how long an approval
+      card waits (`capabilities.approval_timeout_seconds`)
 - [x] The packaged core proves itself: `rishu-core.exe --selftest` starts the
       server and runs a turn over a real WebSocket (runs in the Windows build)
 - [ ] The Windows app starts the bundled core (`core\rishu-core.exe --serve
