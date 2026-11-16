@@ -1,0 +1,67 @@
+name: Scaffold platforms
+
+# One-off helper: generates the Flutter platform folders (app/android and
+# app/windows) with the pinned Flutter version and commits them to main.
+# The cloud build workspace cannot download Flutter or workflow artifacts, so
+# the generated files come into the repo through this workflow instead.
+# It does nothing when both folders already exist.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/scaffold.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scaffold
+  cancel-in-progress: false
+
+jobs:
+  scaffold:
+    name: Generate platform folders
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.50.x
+          cache: true
+      - name: Generate missing platform folders
+        run: |
+          set -euo pipefail
+          if [ -d app/android ] && [ -d app/windows ]; then
+            echo "Both platform folders exist. Nothing to do." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          flutter create --platforms=android,windows --org com.rishuai \
+            --project-name rishu "$RUNNER_TEMP/gen"
+          for platform in android windows; do
+            if [ ! -d "app/$platform" ]; then
+              cp -r "$RUNNER_TEMP/gen/$platform" "app/$platform"
+              echo "Added app/$platform" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          if [ ! -f app/.metadata ]; then
+            cp "$RUNNER_TEMP/gen/.metadata" app/.metadata
+          fi
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/android app/windows app/.metadata
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Build: add generated Flutter platform folders (android, windows)"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1
