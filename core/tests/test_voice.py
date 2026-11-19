@@ -454,3 +454,7 @@ def test_start_hotkey_is_windows_only():
 
     if sys.platform != "win32":
         assert start_hotkey(lambda: None) is False
+
+
+def test_emoji_are_not_spoken():
+    assert clean_for_speech("Badhiya! 🎉🚀 Chalo shuru karte hain ✅") == "Badhiya! Chalo shuru karte hain."

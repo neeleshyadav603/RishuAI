@@ -11,6 +11,8 @@ _URL = re.compile(r"https?://\S+")
 _MARKS = re.compile(r"[*_#>|~]+")
 _BULLET = re.compile(r"^\s*(?:[-•]|\d+[.)])\s+", re.MULTILINE)
 _SPACES = re.compile(r"[ \t]+")
+# Emoji and pictographs are not read aloud.
+_EMOJI = re.compile("[\U0001F000-\U0001FAFF\U00002600-\U000027BF\U0000FE0F\U0000200D]+")
 # Sentence ends: . ! ? and the Devanagari danda, followed by space or end.
 _SENTENCE_END = re.compile(r"(?<=[.!?।॥])\s+")
 
@@ -23,6 +25,7 @@ def clean_for_speech(text: str) -> str:
     text = _URL.sub(" ", text)
     text = _BULLET.sub("", text)
     text = _MARKS.sub(" ", text)
+    text = _EMOJI.sub(" ", text)
     lines = [_SPACES.sub(" ", line).strip() for line in text.splitlines()]
     # A line without end punctuation (a heading, a list item) still ends a sentence.
     joined = []
