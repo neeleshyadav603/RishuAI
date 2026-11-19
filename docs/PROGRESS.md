@@ -113,7 +113,7 @@ Published **v0.1.0** (Windows installer). Added for the demo, ahead of their pha
       delivered as a `reminder` event and spoken aloud (part of Phase 5)
 - [x] Memory of facts the user asks to remember (`remember`, `forget`,
       `list_memories`), injected into the system prompt with the current time
-      (simple Phase 4 memory; not encrypted yet — move to the encrypted store in Phase 3/4)
+      (simple Phase 4 memory; encrypted with DPAPI since v0.4.1)
 - [x] Weather from Open-Meteo (free; non-commercial terms: check before a paid product)
 - [x] CI: installed-app smoke test on Windows; real-model end-to-end with Ollama
 - [x] Screen vision (`look_at_screen`): scaled screenshot to a Groq vision model (v0.3.0)
@@ -137,7 +137,8 @@ Published **v0.1.0** (Windows installer). Added for the demo, ahead of their pha
 
 - [ ] R3 step-up with two factors (PIN + Windows Hello) in the approval card
 - [ ] Face unlock with the camera (opt-in; liveness check) — Windows Hello face already works where the PC has an IR camera
-- [ ] Encrypt the memory and reminder files (DPAPI) and the conversation history
+- [x] Notes, memory and reminders encrypted at rest with DPAPI (`security/vault.py`; old plain files are read and re-encrypted on the next write; a file from another account is set aside as `.unreadable`)
+- [ ] Encrypt the activity log and (later) the conversation history
 - [ ] Voice biometrics (speaker verification) on top of the spoken-password transcript
 
 ## Phases 4–10
@@ -155,7 +156,8 @@ See spec §14. Break each phase into checklist items here when it starts.
   outbound web requests, so only mocked transports were tested).
 - Model IDs in `config/models.yaml` against live Groq/Gemini `/models` lists.
 - Lock: Windows Hello dialog on a PC with fingerprint/face/Windows PIN set up
-  (the PowerShell WinRT call is tested here only with a fake runner); spoken
+  (on the CI runner the WinRT check answers `unavailable:DeviceNotPresent`, so
+  the script loads and runs; the verification dialog itself is untested); spoken
   password with a real mic and Groq Whisper.
 
 ## Known issues

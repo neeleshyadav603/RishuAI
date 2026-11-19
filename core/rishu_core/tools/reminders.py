@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import threading
 import time
@@ -13,21 +12,25 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from ..security.vault import Vault, default_vault
 from .registry import ToolResult
 
 _CLOCK = re.compile(r"^\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*$", re.IGNORECASE)
 
 
 class ReminderStore:
-    def __init__(self, path: Path, clock: Callable[[], float] = time.time):
+    def __init__(
+        self, path: Path, clock: Callable[[], float] = time.time, vault: Vault | None = None
+    ):
         self.path = path
         self._clock = clock
+        self.vault = vault or default_vault()
         self._lock = threading.Lock()
 
     def _load(self) -> list[dict[str, Any]]:
         try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+            data = json.loads(self.vault.read_text(self.path) or "[]")
+        except ValueError:
             return []
         return (
             [r for r in data if isinstance(r, dict) and "due" in r and "text" in r]
@@ -36,10 +39,7 @@ class ReminderStore:
         )
 
     def _save(self, items: list[dict[str, Any]]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        temp = self.path.with_suffix(".tmp")
-        temp.write_text(json.dumps(items, ensure_ascii=False, indent=1), encoding="utf-8")
-        os.replace(temp, self.path)
+        self.vault.write_text(self.path, json.dumps(items, ensure_ascii=False, indent=1))
 
     def add(self, text: str, due: float) -> dict[str, Any]:
         item = {

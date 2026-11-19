@@ -1,4 +1,4 @@
-"""Things the user asked Rishu to remember. Kept on this computer only.
+"""Things the user asked Rishu to remember. Kept on this computer only, encrypted.
 
 Facts are given to the model in the system prompt, so Rishu can use them in
 any later conversation. The user can list and forget them at any time.
@@ -7,13 +7,13 @@ any later conversation. The user can list and forget them at any time.
 from __future__ import annotations
 
 import json
-import os
 import threading
 import time
 import uuid
 from pathlib import Path
 from typing import Any
 
+from ..security.vault import Vault, default_vault
 from .registry import ToolResult
 
 MAX_FACTS = 200
@@ -21,14 +21,15 @@ PROMPT_FACTS = 40
 
 
 class MemoryStore:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, vault: Vault | None = None):
         self.path = path
+        self.vault = vault or default_vault()
         self._lock = threading.Lock()
 
     def load(self) -> list[dict[str, Any]]:
         try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+            data = json.loads(self.vault.read_text(self.path) or "[]")
+        except ValueError:
             return []
         return (
             [f for f in data if isinstance(f, dict) and isinstance(f.get("text"), str)]
@@ -37,10 +38,7 @@ class MemoryStore:
         )
 
     def _save(self, facts: list[dict[str, Any]]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        temp = self.path.with_suffix(".tmp")
-        temp.write_text(json.dumps(facts, ensure_ascii=False, indent=1), encoding="utf-8")
-        os.replace(temp, self.path)
+        self.vault.write_text(self.path, json.dumps(facts, ensure_ascii=False, indent=1))
 
     def add(self, text: str) -> dict[str, Any]:
         text = " ".join(text.split())[:300]
