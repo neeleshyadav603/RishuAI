@@ -64,9 +64,10 @@ def build_agent(
         llm = router if router.providers else None
     home = home or data_dir()
     language = settings.defaults.get("language", "auto")
-    return Agent(
+    registry = registry or build_registry(settings, home=home)
+    agent = Agent(
         llm,
-        registry or build_registry(settings, home=home),
+        registry,
         PermissionEngine(settings.policy, autonomy),
         approver,
         system_prompt=build_system_prompt(settings),
@@ -77,3 +78,20 @@ def build_agent(
         on_event=on_event,
         streaming=streaming,
     )
+    agent.context = lambda: live_context(registry)
+    return agent
+
+
+def live_context(registry: ToolRegistry) -> str:
+    """Facts that change between turns: the time, and what the user asked to remember."""
+    from datetime import datetime
+
+    parts = [
+        f"Current local time: {datetime.now().astimezone().strftime('%A %d %B %Y, %I:%M %p')}."
+    ]
+    memory = getattr(registry, "memory", None)
+    if memory is not None:
+        block = memory.prompt_block()
+        if block:
+            parts.append(block)
+    return "\n\n".join(parts)

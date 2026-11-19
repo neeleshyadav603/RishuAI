@@ -249,6 +249,11 @@ class Session:
     def listen_stop(self) -> None:
         self.recorder.finish()
 
+    def deliver_reminder(self, text: str) -> None:
+        self._send({"v": PROTOCOL_VERSION, "type": "reminder", "text": text})
+        spoken = f"Reminder: {text}" if self._language() == "en" else f"Yaad dila raha hoon: {text}"
+        self.speaker.say(spoken, self.runtime.public_settings().get("voice_gender", "male"))
+
     def toggle_listening(self) -> None:
         """Global shortcut: stop listening if listening, else start in the background."""
         if self.recorder.active:

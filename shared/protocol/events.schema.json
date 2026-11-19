@@ -92,6 +92,9 @@
     },
     {
       "$ref": "#/$defs/voice_status"
+    },
+    {
+      "$ref": "#/$defs/reminder"
     }
   ],
   "$defs": {
@@ -658,6 +661,20 @@
       "required": [
         "input",
         "output"
+      ]
+    },
+    "reminder": {
+      "description": "c2a. A reminder is due (Rishu also says it aloud).",
+      "properties": {
+        "type": {
+          "const": "reminder"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
       ]
     }
   }

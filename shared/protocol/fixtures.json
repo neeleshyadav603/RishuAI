@@ -278,5 +278,13 @@
       "output_reason": "",
       "hotkey": "Ctrl+Shift+Space"
     }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "reminder",
+      "text": "Paani peene ka time"
+    }
   }
 ]

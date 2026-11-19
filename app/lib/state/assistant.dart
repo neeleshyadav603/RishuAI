@@ -86,9 +86,10 @@ class SourcesItem extends ChatItem {
 }
 
 class NoticeItem extends ChatItem {
-  NoticeItem(this.text, {this.error = false});
+  NoticeItem(this.text, {this.error = false, this.reminder = false});
   final String text;
   final bool error;
+  final bool reminder;
 }
 
 class Provider {
@@ -240,6 +241,8 @@ class AssistantController extends ChangeNotifier {
         _card(e);
       case 'notice':
         items.add(NoticeItem('${e['text'] ?? ''}'));
+      case 'reminder':
+        items.add(NoticeItem('⏰ ${e['text'] ?? ''}', reminder: true));
       case 'error':
         if (e['code'] != 'no_such_approval') {
           items.add(NoticeItem('${e['message'] ?? 'Kuch gadbad ho gayi.'}', error: true));

@@ -80,6 +80,9 @@ class Tool:
 class ToolRegistry:
     def __init__(self) -> None:
         self._tools: dict[str, Tool] = {}
+        # Shared stores that the runtime and the system prompt read as well.
+        self.reminders: Any = None
+        self.memory: Any = None
 
     def register(self, tool: Tool) -> None:
         if tool.name in self._tools:

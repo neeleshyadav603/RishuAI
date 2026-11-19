@@ -113,10 +113,21 @@ class Agent:
         self.max_history = max_history
         self.language = language
         self.on_event = on_event
+        self.context: Callable[[], str] | None = None
         # When true, reply text is sent as assistant_token events while it is written.
         self.streaming = streaming
         self.history: list[dict[str, Any]] = []
         self._stop = threading.Event()
+
+    def _full_prompt(self) -> str:
+        """The system prompt plus live context (saved facts, the current time)."""
+        if self.context is None:
+            return self.system_prompt
+        try:
+            extra = self.context()
+        except Exception:  # noqa: BLE001 - context is optional; never break a turn
+            extra = ""
+        return f"{self.system_prompt}\n\n{extra}" if extra else self.system_prompt
 
     # ---- control -------------------------------------------------------
 
@@ -144,7 +155,7 @@ class Agent:
                     return self._finish(result, t("stopped", self.language), emit)
                 if self.llm is None:
                     raise AllProvidersFailed([])
-                messages = [{"role": "system", "content": self.system_prompt}, *self.history]
+                messages = [{"role": "system", "content": self._full_prompt()}, *self.history]
                 if stream is not None:
                     stream.emitted = False
                     response = self.llm.chat(

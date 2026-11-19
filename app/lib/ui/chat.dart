@@ -110,17 +110,21 @@ class EmptyChat extends StatelessWidget {
             ('🌐', 'Open Chrome'),
             ('📰', 'Search today\'s AI news'),
             ('🎓', 'Teach me quantum computing'),
-            ('📝', 'Make a note: meeting at 10 tomorrow'),
-            ('⏰', 'What time is it?'),
+            ('⛅', 'Weather in Gurugram'),
+            ('⏰', 'Remind me in 1 minute to drink water'),
+            ('🎵', 'Play Kesariya on YouTube'),
             ('🔎', 'Open gitm.edu.in'),
+            ('🧠', 'Remember: my favourite subject is DAA'),
           ]
         : const [
             ('🌐', 'Chrome kholo'),
             ('📰', 'Aaj ki AI news search karo'),
             ('🎓', 'Mujhe quantum computing padhao'),
-            ('📝', 'Note likho: kal 10 baje meeting'),
-            ('⏰', 'Time kya hua hai?'),
+            ('⛅', 'Gurugram ka mausam batao'),
+            ('⏰', '1 minute baad paani peene ka reminder lagao'),
+            ('🎵', 'YouTube pe Kesariya chalao'),
             ('🔎', 'gitm.edu.in kholo'),
+            ('🧠', 'Yaad rakho: mera favourite subject DAA hai'),
           ];
     return Center(
       child: SingleChildScrollView(
@@ -556,7 +560,7 @@ class NoticeLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = item.error ? RishuColors.red : RishuColors.muted;
+    final color = item.error ? RishuColors.red : (item.reminder ? RishuColors.amber : RishuColors.muted);
     return Center(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 620),
@@ -570,7 +574,8 @@ class NoticeLine extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(item.error ? Icons.info_rounded : Icons.lightbulb_outline_rounded, size: 16, color: color),
+            Icon(item.error ? Icons.info_rounded : (item.reminder ? Icons.alarm_rounded : Icons.lightbulb_outline_rounded),
+                size: 16, color: color),
             const SizedBox(width: 8),
             Flexible(child: Text(item.text, style: TextStyle(color: color, fontSize: 13, height: 1.4))),
           ],

@@ -5,6 +5,7 @@ import pytest
 from rishu_core.config import load_settings
 from rishu_core.tools import build_registry
 from rishu_core.tools.apps import AppLauncher
+from rishu_core.tools.system import SystemControls
 from rishu_core.voice import engine as voice_engine
 from rishu_core.voice.player import NullPlayer
 
@@ -61,6 +62,9 @@ def registry(settings, spawned, opened_urls, tmp_path):
         now=lambda: datetime(2026, 11, 16, 9, 30),
         uri_opener=lambda uri: opened_urls.append(uri) or True,
         whatsapp_installed=lambda: True,
+        controls=SystemControls(
+            platform="win32", press=lambda vk: None, lock=lambda: True, battery=lambda: (80, False)
+        ),
     )
 
 

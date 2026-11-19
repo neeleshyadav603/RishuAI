@@ -130,6 +130,12 @@ def serve(
     from ..voice.hotkey import start_hotkey
 
     runtime.hotkey_enabled = start_hotkey(runtime.hotkey_pressed)
+    threading.Thread(
+        target=runtime.run_reminder_loop,
+        args=(threading.Event(),),
+        name="rishu-reminders",
+        daemon=True,
+    ).start()
     sock = bind_socket(port)
     server = build_server(runtime)
 

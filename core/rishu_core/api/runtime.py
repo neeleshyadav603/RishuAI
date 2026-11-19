@@ -65,6 +65,7 @@ class CoreRuntime:
         self._router_generation = -1
         self.active_session: Any = None
         self.hotkey_enabled = False
+        self._due_reminders: list[dict[str, Any]] = []
         self.voice = voice or VoiceEngine(
             settings.defaults.get("voice", {}),
             settings.models.get("speech", {}),
@@ -240,6 +241,30 @@ class CoreRuntime:
             home=self.home,
             streaming=bool(settings.defaults.get("streaming", True)),
         )
+
+    # ---- reminders -----------------------------------------------------------
+
+    def check_reminders(self) -> int:
+        """Deliver due reminders to the open window (kept until a window connects)."""
+        store = getattr(self.registry, "reminders", None)
+        if store is not None:
+            self._due_reminders.extend(store.pop_due())
+        session = self.active_session
+        if session is None or not self._due_reminders:
+            return 0
+        delivered = 0
+        while self._due_reminders:
+            item = self._due_reminders.pop(0)
+            session.deliver_reminder(str(item.get("text", "")))
+            delivered += 1
+        return delivered
+
+    def run_reminder_loop(self, stop: threading.Event, interval: float = 1.0) -> None:
+        while not stop.wait(interval):
+            try:
+                self.check_reminders()
+            except Exception:  # noqa: BLE001, S110 - keep the loop alive
+                pass
 
     # ---- the global shortcut ------------------------------------------------
 

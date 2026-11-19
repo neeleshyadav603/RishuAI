@@ -11,7 +11,7 @@ import httpx
 
 from ..config import Settings, data_dir
 from ..permissions import Risk
-from . import apps, comms, notes, web
+from . import apps, comms, memory, notes, reminders, system, weather, web
 from .registry import Tool, ToolRegistry, ToolResult
 
 __all__ = ["Tool", "ToolRegistry", "ToolResult", "build_registry"]
@@ -39,6 +39,7 @@ def build_registry(
     now: Callable[[], datetime] = datetime.now,
     uri_opener: Callable[[str], bool] | None = None,
     whatsapp_installed: Callable[[], bool] | None = None,
+    controls: system.SystemControls | None = None,
 ) -> ToolRegistry:
     """Create the registry with every Phase 1 tool. Dependencies are injectable for tests."""
     registry = ToolRegistry()
@@ -48,6 +49,11 @@ def build_registry(
     browse = url_opener or (lambda url: bool(apps.webbrowser.open(url)))
     open_uri = uri_opener or comms.default_uri_opener
     wa_installed = whatsapp_installed or comms.whatsapp_app_installed
+    controls = controls or system.SystemControls()
+    folder = home or data_dir()
+    registry.reminders = reminders.ReminderStore(folder / "reminders.json")
+    registry.memory = memory.MemoryStore(folder / "memory.json")
+    reminder_store, memory_store = registry.reminders, registry.memory
 
     registry.register(
         Tool(
@@ -215,6 +221,140 @@ def build_registry(
             preview_fn=lambda a: (
                 f"Open an email draft to {a.get('to') or '(choose)'}: {a.get('subject', '')}"
             ),
+        )
+    )
+    registry.register(
+        Tool(
+            name="volume",
+            description="Change the computer's sound volume: up, down or mute (mute toggles).",
+            parameters=_obj(
+                {
+                    "action": {"type": "string", "enum": ["up", "down", "mute"]},
+                    "steps": {
+                        "type": "integer",
+                        "description": "How much, 1-25 steps of 2% (default 5)",
+                    },
+                },
+                ["action"],
+            ),
+            risk=Risk.R1,
+            handler=lambda action, steps=5: controls.volume(action, steps),
+            preview_fn=lambda a: f"Volume {a.get('action', '')}",
+        )
+    )
+    registry.register(
+        Tool(
+            name="screenshot",
+            description="Take a screenshot of the screen and save it in Pictures\\Rishu.",
+            parameters=_obj({}),
+            risk=Risk.R1,
+            handler=controls.screenshot,
+            preview_fn=lambda a: "Take a screenshot",
+        )
+    )
+    registry.register(
+        Tool(
+            name="lock_computer",
+            description="Lock the computer (Windows lock screen).",
+            parameters=_obj({}),
+            risk=Risk.R2,
+            handler=controls.lock_pc,
+            preview_fn=lambda a: "Lock this computer now",
+        )
+    )
+    registry.register(
+        Tool(
+            name="battery_status",
+            description="Battery level and whether it is charging.",
+            parameters=_obj({}),
+            risk=Risk.R0,
+            handler=controls.battery,
+        )
+    )
+    registry.register(
+        Tool(
+            name="set_reminder",
+            description=(
+                "Set a reminder or timer. Rishu says it aloud when due. Give either "
+                "'minutes' from now or a clock time 'at' like '17:30' or '5:30 pm'."
+            ),
+            parameters=_obj(
+                {
+                    "text": {"type": "string", "description": "What to remind about"},
+                    "minutes": {"type": "number", "description": "Minutes from now"},
+                    "at": {"type": "string", "description": "Clock time, e.g. 17:30"},
+                },
+                ["text"],
+            ),
+            risk=Risk.R1,
+            handler=lambda text, minutes=None, at=None: reminders.set_reminder(
+                reminder_store, text, minutes, at, now
+            ),
+            preview_fn=lambda a: f"Set a reminder: {a.get('text', '')}",
+        )
+    )
+    registry.register(
+        Tool(
+            name="list_reminders",
+            description="List the reminders that are still waiting.",
+            parameters=_obj({}),
+            risk=Risk.R0,
+            handler=lambda: reminders.list_reminders(reminder_store),
+        )
+    )
+    registry.register(
+        Tool(
+            name="cancel_reminder",
+            description="Cancel a reminder by its id (from list_reminders).",
+            parameters=_obj({"id": {"type": "string"}}, ["id"]),
+            risk=Risk.R1,
+            handler=lambda id: reminders.cancel_reminder(reminder_store, id),  # noqa: A006
+            preview_fn=lambda a: f"Cancel reminder {a.get('id', '')}",
+        )
+    )
+    registry.register(
+        Tool(
+            name="remember",
+            description=(
+                "Save a fact the user explicitly asks you to remember (preferences, people, "
+                "routines). Only when the user asks."
+            ),
+            parameters=_obj(
+                {"fact": {"type": "string", "description": "The fact, in one sentence"}}, ["fact"]
+            ),
+            risk=Risk.R1,
+            handler=lambda fact: memory.remember(memory_store, fact),
+            preview_fn=lambda a: f"Remember: {a.get('fact', '')}",
+        )
+    )
+    registry.register(
+        Tool(
+            name="forget",
+            description="Forget saved facts that contain these words (when the user asks).",
+            parameters=_obj({"about": {"type": "string"}}, ["about"]),
+            risk=Risk.R1,
+            handler=lambda about: memory.forget(memory_store, about),
+            preview_fn=lambda a: f"Forget what I saved about: {a.get('about', '')}",
+        )
+    )
+    registry.register(
+        Tool(
+            name="list_memories",
+            description="List everything the user asked you to remember.",
+            parameters=_obj({}),
+            risk=Risk.R0,
+            handler=lambda: memory.list_memories(memory_store),
+        )
+    )
+    registry.register(
+        Tool(
+            name="weather",
+            description="Current weather and today/tomorrow forecast for a city.",
+            parameters=_obj(
+                {"place": {"type": "string", "description": "City name, e.g. Gurugram"}}, ["place"]
+            ),
+            risk=Risk.R0,
+            handler=lambda place: weather.weather(place, http_transport),
         )
     )
     return registry
