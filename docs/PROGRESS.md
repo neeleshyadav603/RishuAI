@@ -73,18 +73,23 @@ Core server (`core/rishu_core/api/`, started with `rishu-core --serve`):
       card waits (`capabilities.approval_timeout_seconds`)
 - [x] The packaged core proves itself: `rishu-core.exe --selftest` starts the
       server and runs a turn over a real WebSocket (runs in the Windows build)
-- [ ] The Windows app starts the bundled core (`core\rishu-core.exe --serve
-      --exit-with-parent`, token in `RISHU_TOKEN`, reads the `RISHU_READY` line)
-      and connects on 127.0.0.1
+- [x] The Windows app starts the bundled core (`core\rishu-core.exe --serve
+      --exit-with-parent`, token in `RISHU_TOKEN`, ready line on stdout and in
+      `RISHU_READY_FILE`, parent watched through `RISHU_PARENT_PID`) and connects on
+      127.0.0.1. CI installs the built installer and runs one real turn (smoke test).
 
-Flutter app (must be highly interactive and polished):
-- [ ] App structure: Riverpod, routing, theme (dark/light), i18n (English, Hindi, Hinglish)
-- [ ] Home with the animated orb reacting to state (idle/listening/thinking/speaking/acting/locked/offline)
-- [ ] Conversation view with streaming text and cards: action confirm, sources, progress, error
-- [ ] Onboarding: language, name, provider + API key with a Test button, permissions
-- [ ] Settings: providers/models, autonomy mode, voice, about
-- [ ] Always-visible STOP while an action runs
-- [ ] Widget tests for cards and screens
+Flutter app (`app/lib/`, showcase build 2026-11-19):
+- [x] App structure with ChangeNotifier state (no Riverpod: zero third-party
+      packages keeps the blind CI build safe); dark theme; UI text in Hinglish or
+      English following the language setting (simple `tr()`, not full i18n yet)
+- [x] Animated orb reacting to state and to the microphone level
+- [x] Conversation: streaming text, tool steps, sources card, approval card with
+      countdown, notices/errors, read-aloud and copy buttons, typing indicator
+- [x] Onboarding: name, language, voice preview, free Groq key Check + Save, offline skip
+- [x] Settings: language, voice, autonomy mode, API keys; activity log screen
+- [x] STOP while busy/speaking/listening (button, Esc); Ctrl+Space mic; Ctrl+N new chat
+- [x] State and widget tests with a fake core (`app/test/widget_test.dart`)
+- [ ] Light theme; full i18n tables; Riverpod migration (optional)
 
 Voice (core side, `core/rishu_core/voice/`):
 - [x] Microphone capture with silence detection (sounddevice), live `audio_level`
@@ -94,7 +99,8 @@ Voice (core side, `core/rishu_core/voice/`):
       with Windows SAPI (PowerShell System.Speech) as the offline fallback
 - [x] Playback through Windows MCI (winmm), sentence by sentence, STOP and barge-in
 - [x] Protocol: `listen_start`, `listen_stop`, `speak`, `audio_level`; `GET /v1/voice`
-- [ ] Global hotkey (Ctrl+Shift+Space)
+- [x] Global hotkey Ctrl+Shift+Space (Windows RegisterHotKey in the core) toggles
+      listening and brings the window to the front
 
 ## Phases 3–10
 

@@ -1,0 +1,44 @@
+# Rishu demo guide (showcase ke liye)
+
+## Demo se pehle (15 minute)
+
+1. GitHub Releases se `RishuSetup-0.1.0.exe` download karke install karo.
+   "Unknown publisher" aaye to **More info → Run anyway**.
+2. Rishu kholo, setup poora karo: naam, bhasha, awaaz, aur **Groq API key**
+   (console.groq.com/keys → Create API Key → paste → Check + Save).
+3. Laptop ka **internet on** rakho (natural awaaz aur AI ke liye) aur
+   **mic/speaker** check kar lo (Windows Settings → Sound).
+4. Ek baar practice: mic dabao, "Chrome kholo" bolo.
+
+## Demo flow (5–7 minute)
+
+| # | Aap kya karo / bolo | Kya dikhega |
+|---|---|---|
+| 1 | App kholo | Animated orb, Rishu taiyaar |
+| 2 | Mic dabao: "Namaste Rishu, apna introduction do" | Orb sunte waqt awaaz ke saath hilta hai, phir Rishu bolkar jawab deta hai |
+| 3 | "Chrome kholo" | Chrome khulta hai, chat mein ✓ step dikhta hai |
+| 4 | "gitm.edu.in kholo" | Website browser mein khulti hai |
+| 5 | "Aaj ki AI news search karo" | Web search, Sources card (click karke page khulta hai), bolkar summary |
+| 6 | "Mujhe quantum computing simple bhasha mein padhao" | Step-by-step explanation; phir cross-question poochho: "Qubit aur bit mein kya fark hai?" |
+| 7 | Bolte waqt beech mein **STOP** (ya Esc) | Rishu turant chup ho jata hai |
+| 8 | "Note likho: kal 10 baje HOD ke saath meeting" → "Mere notes dikhao" | Note save aur list |
+| 9 | Kisi aur app mein rehte hue **Ctrl+Shift+Space** dabao aur bolo | Rishu kahin se bhi sunta hai |
+| 10 | Left mein **Kaam** (Activity) tab | Har kaam ka record: risk level, permission |
+| 11 | Settings: awaaz Ladka/Ladki badlo, "Sunao" | Awaaz turant badalti hai |
+
+## Agar kuch gadbad ho
+
+- **Mic se jawab nahi aa raha:** Settings mein Groq key check karo; Windows mic
+  permission (Settings → Privacy → Microphone → desktop apps allow).
+- **Awaaz nahi aa rahi:** top bar ka speaker icon on hai? Internet on hai?
+- **"Rishu start nahi ho paaya":** "Dobara try karo" dabao; antivirus ne core ko
+  roka ho to Rishu ko allow karo.
+- **Backup:** typing hamesha kaam karti hai; suggestions par click karke bhi demo ho sakta hai.
+
+## Kya bolna hai (pitch)
+
+"Rishu ek Hinglish-first personal AI assistant hai jo laptop par locally chalta
+hai. Aap bolo, Rishu samajhta hai, kaam karta hai, padhata hai, aur har zaroori
+kaam se pehle permission leta hai. Data aapke computer par encrypted rehta hai.
+Aage: Android app, face/fingerprint lock, memory, WhatsApp aur 'teach once'
+skills, aur khud ko naye kaam sikhane wala Self-Update Lab."

@@ -1,5 +1,8 @@
 // Rishu: a voice-first personal AI assistant.
 // The app starts the bundled core (Python) and talks to it over a local WebSocket.
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import 'state/assistant.dart';
@@ -13,7 +16,34 @@ const String appVersion = String.fromEnvironment('RISHU_VERSION', defaultValue: 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   final controller = AssistantController()..boot();
+  final smokeFile = Platform.environment['RISHU_SMOKE_FILE'];
+  if (smokeFile != null && smokeFile.isNotEmpty) runSmokeTest(controller, File(smokeFile));
   runApp(RishuApp(controller: controller));
+}
+
+/// Build check on CI: start the bundled core, run one turn, write the result, exit.
+void runSmokeTest(AssistantController controller, File out) {
+  var sent = false;
+  void finish(String result, int code) {
+    out.writeAsStringSync(result);
+    exit(code);
+  }
+
+  Timer(const Duration(minutes: 3), () => finish('timeout phase=${controller.phase.name} ${controller.bootError}', 1));
+  controller.addListener(() {
+    if (controller.phase == Phase.failed) finish('failed ${controller.bootError}', 1);
+    if (controller.phase == Phase.booting) return;
+    if (!sent) {
+      sent = true;
+      controller.sendText('time kya hua hai');
+      return;
+    }
+    for (final item in controller.items) {
+      if (item is AssistantItem && !item.streaming && item.text.isNotEmpty) {
+        finish('ok phase=${controller.phase.name} reply=${item.text}', 0);
+      }
+    }
+  });
 }
 
 class RishuApp extends StatelessWidget {
