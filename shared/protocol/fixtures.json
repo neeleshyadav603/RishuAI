@@ -53,7 +53,8 @@
         "script": "roman",
         "autonomy": "smart",
         "streaming": true,
-        "speak_replies": true
+        "speak_replies": true,
+        "voice_gender": "male"
       },
       "providers": [
         {
@@ -77,7 +78,14 @@
         "step_up": false,
         "secure_store": "dpapi",
         "keys_persist": true,
-        "approval_timeout_seconds": 120.0
+        "approval_timeout_seconds": 120.0,
+        "voice": {
+          "input": true,
+          "input_reason": "",
+          "output": true,
+          "output_reason": "",
+          "hotkey": "Ctrl+Shift+Space"
+        }
       }
     }
   },
@@ -227,6 +235,48 @@
       "type": "error",
       "code": "busy",
       "message": "Rishu is still working on the previous message."
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "listen_start"
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "listen_stop"
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "speak",
+      "text": "Namaste Neelesh!"
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "audio_level",
+      "level": 0.42
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "voice_status",
+      "input": false,
+      "input_reason": "needs a Groq API key",
+      "output": true,
+      "output_reason": "",
+      "hotkey": "Ctrl+Shift+Space"
     }
   }
 ]

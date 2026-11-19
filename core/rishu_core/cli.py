@@ -108,12 +108,59 @@ def _selftest_server(settings: Any) -> None:
             thread.join(timeout=10)
 
 
+def voicetest() -> int:
+    """Packaged build on Windows: prove the voice parts are bundled and work.
+
+    Prints one line per part; exit code 1 if Windows voices or the player fail.
+    Natural (edge) voices need the internet and are reported, not required.
+    """
+    import tempfile
+    from pathlib import Path
+
+    from .voice.mic import mic_available, to_wav
+    from .voice.player import default_player
+    from .voice.tts import EdgeSynthesizer, SapiSynthesizer, TtsError
+
+    settings = load_settings()
+    voice_cfg = settings.defaults.get("voice", {})
+    ok = True
+    try:
+        import sounddevice  # noqa: F401
+
+        print("sounddevice: bundled")
+    except (ImportError, OSError) as exc:
+        print(f"sounddevice: MISSING ({exc})")
+        ok = False
+    print(f"microphone: {mic_available()}")
+    print(f"player: {type(default_player()).__name__}")
+    assert to_wav(b"\x00\x00" * 160)[:4] == b"RIFF"
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp)
+        for name, synth in (
+            ("windows voice", SapiSynthesizer(out / "scripts")),
+            ("edge voice", EdgeSynthesizer(voice_cfg.get("edge_voices", {}))),
+        ):
+            for text in ("Namaste, main Rishu hoon.", "नमस्ते, मैं रिशु हूँ।"):
+                try:
+                    audio = synth.synth(text, "male", out)
+                    print(
+                        f"{name}: ok ({audio.kind}, {audio.path.stat().st_size} bytes) for {text!r}"
+                    )
+                except TtsError as exc:
+                    print(f"{name}: FAILED for {text!r}: {exc}")
+                    if name == "windows voice" and text.isascii():
+                        ok = False
+    print("voicetest ok" if ok else "voicetest FAILED")
+    return 0 if ok else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="rishu", description="Rishu text chat")
     parser.add_argument("--once", metavar="TEXT", help="run one message and exit")
     parser.add_argument("--autonomy", choices=AUTONOMY_MODES, help="override the autonomy mode")
     parser.add_argument("--offline", action="store_true", help="do not contact any LLM provider")
     parser.add_argument("--selftest", action="store_true", help="check that this build is complete")
+    parser.add_argument("--voicetest", action="store_true", help="check the voice parts (Windows)")
     parser.add_argument("--serve", action="store_true", help="run the local server for the app")
     parser.add_argument("--port", type=int, default=0, help="server port (0 picks a free one)")
     parser.add_argument(
@@ -123,12 +170,19 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    if args.serve:
+        from .api.serve import ensure_streams
+        from .config import data_dir
+
+        ensure_streams(data_dir() / "core.log")
     for stream in (sys.stdout, sys.stdin):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
 
     if args.selftest:
         return selftest()
+    if args.voicetest:
+        return voicetest()
     if args.serve:
         from .api import serve
 

@@ -22,3 +22,22 @@ server:
   # Seconds the user has to answer an approval card before it counts as "no".
   approval_timeout_seconds: 120
   max_message_chars: 8000
+
+# Voice of Rishu's replies: male | female (the user can change it in the app).
+voice_gender: male
+
+voice:
+  # Natural Microsoft neural voices through the free edge-tts package (online).
+  # Not an official public API, so it can be switched off; Windows' own voices
+  # (offline) are always the fallback.
+  edge_tts: true
+  rate: "+5%"
+  edge_voices:
+    male: {devanagari: hi-IN-MadhurNeural, latin: en-IN-PrabhatNeural}
+    female: {devanagari: hi-IN-SwaraNeural, latin: en-IN-NeerjaNeural}
+  # Global shortcut that starts listening (Windows).
+  hotkey_label: "Ctrl+Shift+Space"
+  mic:
+    silence_seconds: 1.2   # stop listening after this much silence
+    no_speech_seconds: 7   # give up if nothing is said
+    max_seconds: 30

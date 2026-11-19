@@ -110,9 +110,7 @@ def test_http_api_rejects_missing_token_and_browser_origins(settings, registry, 
 @pytest.mark.parametrize(
     "headers", [{}, {"Authorization": "Bearer nope-nope-nope-nope"}, {**AUTH, "Origin": "http://x"}]
 )
-def test_websocket_rejects_missing_token_and_browser_origins(
-    settings, registry, tmp_path, headers
-):
+def test_websocket_rejects_missing_token_and_browser_origins(settings, registry, tmp_path, headers):
     client = TestClient(create_app(make_runtime(settings, registry, tmp_path)))
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect("/ws", headers=headers) as ws:
@@ -146,7 +144,9 @@ def test_hello_then_a_streamed_turn_with_a_tool(settings, registry, tmp_path, sp
     kinds = [e["type"] for e in events]
     assert kinds[0] == "state_change" and events[0]["state"] == "thinking"
     assert "tool_progress" in kinds and "tool_result" in kinds
-    assert "".join(e["text"] for e in events if e["type"] == "assistant_token") == "Chrome khol diya."
+    assert (
+        "".join(e["text"] for e in events if e["type"] == "assistant_token") == "Chrome khol diya."
+    )
     assert [e for e in events if e["type"] == "assistant_message"][0]["text"] == "Chrome khol diya."
     assert spawned == [("exe", "chrome")]
 
@@ -392,6 +392,7 @@ def test_settings_round_trip_and_validation(settings, registry, tmp_path):
         "user_name": "",
         "language": "auto",
         "script": "roman",
+        "voice_gender": "male",
         "streaming": True,
         "speak_replies": True,
         "autonomy": "smart",
@@ -462,9 +463,16 @@ def test_key_is_tested_saved_and_never_returned(settings, registry, tmp_path):
 
     assert client.delete("/v1/providers/groq/key", headers=AUTH).status_code == 200
     assert secrets.get("GROQ_API_KEY") is None
-    assert client.put("/v1/providers/groq/key", headers=AUTH, json={"api_key": ""}).status_code == 422
-    assert client.put("/v1/providers/nope/key", headers=AUTH, json={"api_key": "k"}).status_code == 404
-    assert client.put("/v1/providers/ollama/key", headers=AUTH, json={"api_key": "k"}).status_code == 422
+    assert (
+        client.put("/v1/providers/groq/key", headers=AUTH, json={"api_key": ""}).status_code == 422
+    )
+    assert (
+        client.put("/v1/providers/nope/key", headers=AUTH, json={"api_key": "k"}).status_code == 404
+    )
+    assert (
+        client.put("/v1/providers/ollama/key", headers=AUTH, json={"api_key": "k"}).status_code
+        == 422
+    )
 
 
 def test_local_provider_test_reports_unreachable(settings, registry, tmp_path):

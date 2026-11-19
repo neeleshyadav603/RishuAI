@@ -31,6 +31,12 @@ def build_system_prompt(settings: Settings) -> str:
         context.append(f"- {_LANGUAGE_HINT[language]}")
     if defaults.get("script") == "devanagari":
         context.append("- Write Hindi in Devanagari script.")
+    if defaults.get("speak_replies") is not False:
+        context.append(
+            "- Your replies are also read aloud by a voice. Use short, natural spoken "
+            "sentences. Avoid tables, long lists and symbols unless the user asks for "
+            "detail; when teaching, explain step by step in small parts."
+        )
     return "\n\n".join(
         [
             read_prompt("persona_rishu", settings.root),

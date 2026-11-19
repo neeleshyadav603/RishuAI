@@ -23,6 +23,7 @@ from ..llm.openai_compat import OpenAICompatClient
 from ..security import SecretStore, clean_secret, open_secret_store
 from ..tools import ToolRegistry, build_registry
 from ..user_settings import UserSettings
+from ..voice import VoiceEngine
 
 PROTOCOL_VERSION = 1
 MIN_TOKEN_LENGTH = 16
@@ -44,6 +45,7 @@ class CoreRuntime:
         registry: ToolRegistry | None = None,
         transport: httpx.BaseTransport | None = None,
         env: Mapping[str, str] | None = None,
+        voice: VoiceEngine | None = None,
     ):
         if len(token) < MIN_TOKEN_LENGTH:
             raise ValueError("the session token is too short")
@@ -61,6 +63,14 @@ class CoreRuntime:
         self._lock = threading.Lock()
         self._router: LLMRouter | None = None
         self._router_generation = -1
+        self.voice = voice or VoiceEngine(
+            settings.defaults.get("voice", {}),
+            settings.models.get("speech", {}),
+            settings.models.get("providers", {}),
+            self.key_for_provider,
+            home=self.home,
+            transport=transport,
+        )
 
     # ---- settings ------------------------------------------------------
 
@@ -82,6 +92,7 @@ class CoreRuntime:
             "autonomy": self.autonomy(),
             "streaming": defaults.get("streaming") is not False,
             "speak_replies": defaults.get("speak_replies") is not False,
+            "voice_gender": defaults.get("voice_gender") or "male",
         }
 
     def update_settings(self, patch: dict[str, Any]) -> dict[str, Any]:
@@ -117,6 +128,13 @@ class CoreRuntime:
             return saved, "saved"
         from_env = self._environment().get(env_name, "")
         return from_env, ("env" if from_env else None)
+
+    def key_for_provider(self, name: str) -> str:
+        """The usable API key of a provider ('' when none); used by voice input."""
+        cfg = self.base_settings.models.get("providers", {}).get(name)
+        if not isinstance(cfg, dict):
+            return ""
+        return self._key_for(cfg)[0]
 
     def provider_env(self) -> dict[str, str]:
         """Environment for the router: real env vars plus the saved keys."""
@@ -236,5 +254,6 @@ class CoreRuntime:
                 "keys_persist": bool(self.secrets.persistent),
                 # How long an approval card waits before it counts as "no".
                 "approval_timeout_seconds": self.server_option("approval_timeout_seconds", 120.0),
+                "voice": self.voice.status(),
             },
         }

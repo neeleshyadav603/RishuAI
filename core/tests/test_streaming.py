@@ -33,11 +33,15 @@ def test_stream_text_arrives_piece_by_piece():
         assert json.loads(request.content)["stream"] is True
         return httpx.Response(
             200,
-            content=sse(delta(role="assistant"), delta(content="Namaste "), delta(content="Neelesh")),
+            content=sse(
+                delta(role="assistant"), delta(content="Namaste "), delta(content="Neelesh")
+            ),
             headers={"content-type": "text/event-stream"},
         )
 
-    client = OpenAICompatClient("groq", "https://x.test/v1", "k", transport=httpx.MockTransport(handler))
+    client = OpenAICompatClient(
+        "groq", "https://x.test/v1", "k", transport=httpx.MockTransport(handler)
+    )
     stream, tokens, resets = collect()
     response = client.chat("m-1", [{"role": "user", "content": "hi"}], stream=stream)
     assert tokens == ["Namaste ", "Neelesh"]
@@ -47,11 +51,17 @@ def test_stream_text_arrives_piece_by_piece():
 
 def test_stream_tool_call_is_assembled_from_pieces():
     chunks = [
-        delta(tool_calls=[{"index": 0, "id": "call_a", "function": {"name": "open_app", "arguments": ""}}]),
+        delta(
+            tool_calls=[
+                {"index": 0, "id": "call_a", "function": {"name": "open_app", "arguments": ""}}
+            ]
+        ),
         delta(tool_calls=[{"index": 0, "function": {"arguments": '{"na'}}]),
         delta(tool_calls=[{"index": 0, "function": {"arguments": 'me": "chrome"}'}}]),
         # A second call delivered whole and without an index (as Gemini does).
-        delta(tool_calls=[{}, {"id": "call_b", "function": {"name": "get_time", "arguments": "{}"}}]),
+        delta(
+            tool_calls=[{}, {"id": "call_b", "function": {"name": "get_time", "arguments": "{}"}}]
+        ),
     ]
     client = OpenAICompatClient(
         "groq",
@@ -107,8 +117,16 @@ def test_router_discards_partial_text_before_falling_back():
     config = {
         "order": ["a", "b"],
         "providers": {
-            "a": {"base_url": "https://a.test/v1", "api_key_env": "A", "models": {"smart": ["a-1"]}},
-            "b": {"base_url": "https://b.test/v1", "api_key_env": "B", "models": {"smart": ["b-1"]}},
+            "a": {
+                "base_url": "https://a.test/v1",
+                "api_key_env": "A",
+                "models": {"smart": ["a-1"]},
+            },
+            "b": {
+                "base_url": "https://b.test/v1",
+                "api_key_env": "B",
+                "models": {"smart": ["b-1"]},
+            },
         },
     }
     router = LLMRouter.from_settings(

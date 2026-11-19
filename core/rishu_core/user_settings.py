@@ -18,6 +18,7 @@ from .permissions import AUTONOMY_MODES
 
 LANGUAGES = ("auto", "hi", "en", "hinglish")
 SCRIPTS = ("roman", "devanagari")
+VOICE_GENDERS = ("male", "female")
 
 
 def _choice(options: tuple[str, ...]) -> Callable[[Any], str]:
@@ -52,6 +53,7 @@ _FIELDS: dict[str, Callable[[Any], Any]] = {
     "autonomy": _choice(AUTONOMY_MODES),
     "streaming": _flag,
     "speak_replies": _flag,
+    "voice_gender": _choice(VOICE_GENDERS),
 }
 
 

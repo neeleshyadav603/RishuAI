@@ -54,3 +54,8 @@ providers:
       smart: []
       coder: []
       vision: []
+
+# Speech to text (voice input). Uses the API key of stt_provider.
+speech:
+  stt_provider: groq
+  stt_models: [whisper-large-v3-turbo, whisper-large-v3]

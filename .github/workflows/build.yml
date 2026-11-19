@@ -118,13 +118,17 @@ jobs:
           cache-dependency-path: core/pyproject.toml
       - name: Package the core with PyInstaller
         run: |
-          python -m pip install -e "core[web]" pyinstaller
+          python -m pip install -e "core[web,voice]" pyinstaller
+          # --hide-console: no black window when the app starts the core.
           python -m PyInstaller --noconfirm --onedir --name rishu-core \
+            --hide-console hide-early \
             --add-data "config:config" --add-data "shared:shared" \
             --collect-all trafilatura --collect-all justext --collect-all courlan \
             --collect-all htmldate --collect-all ddgs \
             --collect-submodules uvicorn --collect-submodules websockets \
             --collect-submodules anyio \
+            --collect-all edge_tts --collect-submodules aiohttp --collect-data certifi \
+            --collect-all sounddevice --collect-all _sounddevice_data \
             core/run_core.py
       - name: Smoke-test the packaged core
         env:
@@ -133,6 +137,12 @@ jobs:
           # --selftest also starts the local server and runs a turn over WebSocket.
           dist/rishu-core/rishu-core.exe --selftest
           dist/rishu-core/rishu-core.exe --offline --once "Rishu, time kya hua hai?"
+      - name: Voice check of the packaged core
+        env:
+          RISHU_HOME: ${{ runner.temp }}/rishu-home
+        run: |
+          dist/rishu-core/rishu-core.exe --voicetest | tee voicetest.txt
+          { echo '### Voice check'; echo '```'; cat voicetest.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: subosito/flutter-action@v2
         with:
           channel: stable

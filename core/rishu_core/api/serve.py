@@ -5,8 +5,12 @@ environment variable and reads one line from stdout:
 
     RISHU_READY {"port": 51234, "protocol": 1, "version": "0.1.0"}
 
-With ``--exit-with-parent`` the core stops as soon as its stdin closes, which
-happens when the app exits or crashes, so no core is left running alone.
+The same line is also written to the file named in ``RISHU_READY_FILE`` (when
+set), because a windowless process may have no usable stdout.
+
+With ``--exit-with-parent`` the core stops when the app is gone: it watches the
+process id in ``RISHU_PARENT_PID`` when given, otherwise it waits for stdin to
+close. No core is left running alone after the app exits or crashes.
 """
 
 from __future__ import annotations
@@ -47,6 +51,49 @@ def _watch_parent(stdin: Any, on_gone: Callable[[], None]) -> None:
     except (OSError, ValueError):
         pass
     on_gone()
+
+
+def _pid_alive(pid: int) -> bool:
+    if sys.platform == "win32":
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        handle = kernel32.OpenProcess(
+            0x00100000 | 0x1000, False, pid
+        )  # SYNCHRONIZE | QUERY_LIMITED
+        if not handle:
+            return False
+        try:
+            return kernel32.WaitForSingleObject(handle, 0) == 0x102  # WAIT_TIMEOUT: still running
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _watch_pid(pid: int, on_gone: Callable[[], None], interval: float = 1.0) -> None:
+    while _pid_alive(pid):
+        time.sleep(interval)
+    on_gone()
+
+
+def ensure_streams(log_path: Any) -> None:
+    """A windowless process has no stdout/stderr: send them to a log file instead."""
+    if sys.stdout is not None and sys.stderr is not None:
+        return
+    try:
+        handle = open(log_path, "a", encoding="utf-8", buffering=1)  # noqa: SIM115
+    except OSError:
+        handle = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
+    if sys.stdout is None:
+        sys.stdout = handle
+    if sys.stderr is None:
+        sys.stderr = handle
 
 
 def build_server(runtime: CoreRuntime) -> Any:
@@ -91,9 +138,30 @@ def serve(
     if generated:
         # Started by hand (development): show the token so a client can connect.
         ready["token"] = token
-    print(READY_PREFIX + json.dumps(ready), file=out, flush=True)
+    line = READY_PREFIX + json.dumps(ready)
+    try:
+        print(line, file=out, flush=True)
+    except (OSError, ValueError, AttributeError):
+        pass  # no usable stdout; the ready file below still works
+    ready_file = os.environ.get("RISHU_READY_FILE")
+    if ready_file:
+        temp = ready_file + ".tmp"
+        with open(temp, "w", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+        os.replace(temp, ready_file)
 
-    if exit_with_parent:
+    parent_pid = os.environ.get("RISHU_PARENT_PID", "")
+    if exit_with_parent and parent_pid.isdigit():
+
+        def parent_exited() -> None:
+            server.should_exit = True
+            time.sleep(3.0)
+            os._exit(0)
+
+        threading.Thread(
+            target=_watch_pid, args=(int(parent_pid), parent_exited), daemon=True
+        ).start()
+    elif exit_with_parent:
 
         def parent_gone() -> None:
             server.should_exit = True

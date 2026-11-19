@@ -9,6 +9,7 @@ from typing import Any
 from ..agent import Agent, ApprovalRequest
 from ..permissions import Risk
 from ..strings import t
+from ..voice import MicError, Speaker, SttError, to_wav
 from .runtime import PROTOCOL_VERSION, CoreRuntime
 
 Event = dict[str, Any]
@@ -84,6 +85,16 @@ class Session:
         self._turn = threading.Lock()
         self._proposals: dict[str, Event] = {}
         self._closed = False
+        self._speech_pending = False
+        voice = runtime.voice
+        self.speaker = Speaker(
+            voice.synthesizer,
+            voice.player,
+            voice.workdir,
+            on_state=self._speech_state,
+            on_error=self._speech_error,
+        )
+        self.recorder = voice.new_recorder()
 
     # ---- helpers -------------------------------------------------------
 
@@ -95,7 +106,28 @@ class Session:
             self._proposals[event["call_id"]] = event
             if event.get("decision") == "confirm":
                 self.approver.expect(event["call_id"])
+        kind = event.get("type")
+        if kind == "state_change" and event.get("state") == "idle" and self._speech_pending:
+            # The reply is about to be spoken: go straight to "speaking", no idle flicker.
+            self._speech_pending = False
+            event = {**event, "state": "speaking"}
         self._send(event)
+        if kind == "assistant_message" and not self._closed:
+            text = event.get("text") or ""
+            settings = self.runtime.public_settings()
+            if text and settings.get("speak_replies"):
+                self._speech_pending = self.speaker.say(text, settings.get("voice_gender", "male"))
+
+    def _state(self, state: str) -> None:
+        self._send({"v": PROTOCOL_VERSION, "type": "state_change", "state": state})
+
+    def _speech_state(self, state: str) -> None:
+        if not self._closed:
+            self._state(state)
+
+    def _speech_error(self, message: str) -> None:
+        if not self._closed:
+            self.error("voice_output", f"{t('voice_output_failed', self._language())} ({message}).")
 
     def error(self, code: str, message: str) -> None:
         self._send({"v": PROTOCOL_VERSION, "type": "error", "code": code, "message": message})
@@ -147,9 +179,85 @@ class Session:
             self._turn.release()
 
     def stop(self) -> None:
+        self.recorder.cancel()
+        self.stop_speaking()
         self.approver.cancel_all()
         if self._agent is not None:
             self._agent.stop()
+
+    # ---- voice ---------------------------------------------------------
+
+    def listen(self) -> None:
+        """Push-to-talk: record, transcribe, then run the turn. Blocking (worker thread)."""
+        status = self.runtime.voice.status()
+        if not status["input"]:
+            reason = status.get("input_reason") or ""
+            self.error("voice_unavailable", f"{t('voice_input_off', self._language())}: {reason}.")
+            return
+        self.stop_speaking()  # barge-in: the user wants to talk now
+        if self.busy:
+            self.error("busy", "Rishu is still working on the previous message.")
+            return
+        if self.recorder.active:
+            return
+        self._state("listening")
+        try:
+            recording = self.recorder.record(on_level=self._audio_level)
+        except MicError as exc:
+            self.error("voice_mic", str(exc))
+            self._state("idle")
+            return
+        if recording.cancelled or self._closed:
+            self._state("idle")
+            return
+        if not recording.heard_speech:
+            self._send(
+                {"v": PROTOCOL_VERSION, "type": "notice", "text": t("not_heard", self._language())}
+            )
+            self._state("idle")
+            return
+        self._state("thinking")
+        language = "en" if self.runtime.public_settings().get("language") == "en" else "hi"
+        try:
+            transcriber = self.runtime.voice.transcriber()
+            try:
+                text = transcriber.transcribe(to_wav(recording.pcm), language=language)
+            finally:
+                transcriber.close()
+        except SttError as exc:
+            self.error(f"voice_{exc.code}", str(exc))
+            self._state("idle")
+            return
+        if not text.strip() or self._closed:
+            self._send(
+                {"v": PROTOCOL_VERSION, "type": "notice", "text": t("not_heard", self._language())}
+            )
+            self._state("idle")
+            return
+        self._send(
+            {"v": PROTOCOL_VERSION, "type": "transcript_final", "text": text, "language": language}
+        )
+        if not self.try_begin_turn():
+            self.error("busy", "Rishu is still working on the previous message.")
+            return
+        self.run_turn(text)
+
+    def _audio_level(self, level: float) -> None:
+        self._send({"v": PROTOCOL_VERSION, "type": "audio_level", "level": round(level, 3)})
+
+    def listen_stop(self) -> None:
+        self.recorder.finish()
+
+    def speak(self, text: str) -> None:
+        if not self.speaker.say(text, self.runtime.public_settings().get("voice_gender", "male")):
+            self.error("voice_output", t("voice_output_failed", self._language()) + ".")
+
+    def stop_speaking(self) -> None:
+        was_speaking = self.speaker.speaking
+        self._speech_pending = False
+        self.speaker.stop(wait=0)
+        if was_speaking and not self.busy and not self._closed:
+            self._state("idle")
 
     def approval(self, call_id: str, approved: bool, always_allow: bool = False) -> None:
         proposal = self._proposals.get(call_id)

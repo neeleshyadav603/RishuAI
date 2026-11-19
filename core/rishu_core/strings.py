@@ -15,6 +15,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "offline_prefix": "(Offline mode) ",
         "denied": "Theek hai, yeh nahi kiya.",
         "step_up_unavailable": "Is kaam ke liye extra security check chahiye, jo abhi set up nahi hai. Isliye yeh nahi kiya.",
+        "not_heard": "Mujhe kuch sunai nahi diya. Mic ke paas bol kar dobara try karo.",
+        "voice_input_off": "Voice input abhi available nahi hai",
+        "voice_output_failed": "Awaaz mein jawab nahi suna paaya",
     },
     "en": {
         "stopped": "Okay, stopped.",
@@ -24,6 +27,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "offline_prefix": "(Offline mode) ",
         "denied": "Okay, I did not do that.",
         "step_up_unavailable": "This action needs an extra security check that is not set up yet, so I did not do it.",
+        "not_heard": "I didn't hear anything. Please speak closer to the mic and try again.",
+        "voice_input_off": "Voice input is not available right now",
+        "voice_output_failed": "I couldn't speak the reply aloud",
     },
 }
 _STRINGS["hi"] = _STRINGS["hinglish"]

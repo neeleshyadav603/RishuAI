@@ -38,8 +38,16 @@ def test_every_event_type_has_a_fixture():
         {"v": 2, "type": "stop"},
         {"v": 1, "type": "user_message"},
         {"v": 1, "type": "state_change", "state": "dancing"},
-        {"v": 1, "type": "tool_call_proposed", "call_id": "c", "tool": "t", "args": {}, "risk": "R9",
-         "decision": "confirm", "preview": "p"},
+        {
+            "v": 1,
+            "type": "tool_call_proposed",
+            "call_id": "c",
+            "tool": "t",
+            "args": {},
+            "risk": "R9",
+            "decision": "confirm",
+            "preview": "p",
+        },
         {"v": 1, "type": "made_up"},
     ],
 )

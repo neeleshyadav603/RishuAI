@@ -50,7 +50,12 @@ def create_app(runtime: CoreRuntime) -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
-        return {"ok": True, "name": "rishu-core", "version": __version__, "protocol": PROTOCOL_VERSION}
+        return {
+            "ok": True,
+            "name": "rishu-core",
+            "version": __version__,
+            "protocol": PROTOCOL_VERSION,
+        }
 
     @app.get("/v1/settings", dependencies=guard)
     async def get_settings() -> dict[str, Any]:
@@ -94,6 +99,10 @@ def create_app(runtime: CoreRuntime) -> FastAPI:
         if key is not None and not isinstance(key, str):
             raise HTTPException(status_code=422, detail="api_key must be text")
         return await asyncio.to_thread(runtime.test_provider, name, key)
+
+    @app.get("/v1/voice", dependencies=guard)
+    async def voice_status() -> dict[str, Any]:
+        return await asyncio.to_thread(runtime.voice.status, True)
 
     @app.get("/v1/activity", dependencies=guard)
     async def activity(limit: int = 50) -> dict[str, Any]:
@@ -179,6 +188,18 @@ async def _serve_connection(runtime: CoreRuntime, websocket: WebSocket) -> None:
                     session.error("bad_frame", "approval_response needs call_id and approved.")
             elif kind == "new_conversation":
                 session.new_conversation()
+            elif kind == "listen_start":
+                task = asyncio.create_task(asyncio.to_thread(session.listen))
+                turns.add(task)
+                task.add_done_callback(turns.discard)
+            elif kind == "listen_stop":
+                session.listen_stop()
+            elif kind == "speak":
+                text = event.get("text")
+                if isinstance(text, str) and text.strip() and len(text) <= 5000:
+                    await asyncio.to_thread(session.speak, text)
+                else:
+                    session.error("bad_frame", "speak needs text (up to 5000 characters).")
             else:
                 session.error("unsupported", f"Event '{kind}' is not supported by this core.")
     except WebSocketDisconnect:

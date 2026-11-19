@@ -80,9 +80,7 @@ class TokenStream:
     turned out to be a preamble to tool calls).
     """
 
-    def __init__(
-        self, on_token: Callable[[str], None], on_reset: Callable[[], None] | None = None
-    ):
+    def __init__(self, on_token: Callable[[str], None], on_reset: Callable[[], None] | None = None):
         self._on_token = on_token
         self._on_reset = on_reset
         self.emitted = False

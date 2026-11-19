@@ -8,7 +8,9 @@ from rishu_core.user_settings import UserSettings
 def test_update_validates_and_persists(tmp_path):
     store = UserSettings(tmp_path / "settings.json")
     assert store.load() == {}
-    saved = store.update({"user_name": "  Neelesh \n Yadav ", "language": "hi", "autonomy": "ask_always"})
+    saved = store.update(
+        {"user_name": "  Neelesh \n Yadav ", "language": "hi", "autonomy": "ask_always"}
+    )
     assert saved == {"user_name": "Neelesh Yadav", "language": "hi", "autonomy": "ask_always"}
     store.update({"script": "devanagari", "streaming": False})
     assert UserSettings(tmp_path / "settings.json").load() == {

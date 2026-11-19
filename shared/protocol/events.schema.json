@@ -77,6 +77,21 @@
     },
     {
       "$ref": "#/$defs/new_conversation"
+    },
+    {
+      "$ref": "#/$defs/listen_start"
+    },
+    {
+      "$ref": "#/$defs/listen_stop"
+    },
+    {
+      "$ref": "#/$defs/speak"
+    },
+    {
+      "$ref": "#/$defs/audio_level"
+    },
+    {
+      "$ref": "#/$defs/voice_status"
     }
   ],
   "$defs": {
@@ -499,6 +514,12 @@
             },
             "speak_replies": {
               "type": "boolean"
+            },
+            "voice_gender": {
+              "enum": [
+                "male",
+                "female"
+              ]
             }
           },
           "required": [
@@ -563,6 +584,81 @@
           "const": "new_conversation"
         }
       }
+    },
+    "listen_start": {
+      "description": "a2c. Start listening to the microphone (push-to-talk). Stops any speech in progress.",
+      "properties": {
+        "type": {
+          "const": "listen_start"
+        }
+      }
+    },
+    "listen_stop": {
+      "description": "a2c. The user is done speaking: stop listening and transcribe.",
+      "properties": {
+        "type": {
+          "const": "listen_stop"
+        }
+      }
+    },
+    "speak": {
+      "description": "a2c. Read this text aloud (for example, replay an earlier reply).",
+      "properties": {
+        "type": {
+          "const": "speak"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        }
+      },
+      "required": [
+        "text"
+      ]
+    },
+    "audio_level": {
+      "description": "c2a. Microphone loudness while listening, 0..1, about 10 times a second.",
+      "properties": {
+        "type": {
+          "const": "audio_level"
+        },
+        "level": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "level"
+      ]
+    },
+    "voice_status": {
+      "description": "c2a. What voice can do right now (sent in hello capabilities.voice and after changes).",
+      "properties": {
+        "type": {
+          "const": "voice_status"
+        },
+        "input": {
+          "type": "boolean"
+        },
+        "input_reason": {
+          "type": "string"
+        },
+        "output": {
+          "type": "boolean"
+        },
+        "output_reason": {
+          "type": "string"
+        },
+        "hotkey": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "input",
+        "output"
+      ]
     }
   }
 }

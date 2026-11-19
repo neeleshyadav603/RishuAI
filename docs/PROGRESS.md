@@ -4,7 +4,7 @@ Checkpoint file. Every session reads this first and updates it with every push.
 Rules for sessions are in `CLAUDE.md`.
 
 **Current phase:** 2 (App + Voice)
-**Last updated:** 2026-11-16
+**Last updated:** 2026-11-19 (showcase sprint: Windows app + voice)
 
 ## Phase 0 — Setup
 
@@ -86,10 +86,15 @@ Flutter app (must be highly interactive and polished):
 - [ ] Always-visible STOP while an action runs
 - [ ] Widget tests for cards and screens
 
-Voice:
-- [ ] STT: faster-whisper (local) with Groq Whisper option; Hindi/Hinglish
-- [ ] TTS: edge-tts behind a flag + offline fallback (Piper or SAPI)
-- [ ] Push-to-talk, global hotkey, barge-in
+Voice (core side, `core/rishu_core/voice/`):
+- [x] Microphone capture with silence detection (sounddevice), live `audio_level`
+- [x] STT through Groq Whisper (`whisper-large-v3-turbo`, from `config/models.yaml`);
+      local faster-whisper is deferred (installer size)
+- [x] TTS: edge-tts neural voices (hi-IN / en-IN, male or female, picked by script)
+      with Windows SAPI (PowerShell System.Speech) as the offline fallback
+- [x] Playback through Windows MCI (winmm), sentence by sentence, STOP and barge-in
+- [x] Protocol: `listen_start`, `listen_stop`, `speak`, `audio_level`; `GET /v1/voice`
+- [ ] Global hotkey (Ctrl+Shift+Space)
 
 ## Phases 3–10
 
