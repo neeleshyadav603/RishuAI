@@ -1,137 +1,99 @@
-// Rishu app shell. This first version proves the Windows and Android build
-// pipeline: it shows the animated orb and the build version. The conversation
-// UI and the link to the core arrive in Phase 2 (see docs/PROGRESS.md).
-import 'dart:math' as math;
-
+// Rishu: a voice-first personal AI assistant.
+// The app starts the bundled core (Python) and talks to it over a local WebSocket.
 import 'package:flutter/material.dart';
+
+import 'state/assistant.dart';
+import 'ui/home.dart';
+import 'ui/onboarding.dart';
+import 'ui/orb.dart';
+import 'ui/theme.dart';
 
 const String appVersion = String.fromEnvironment('RISHU_VERSION', defaultValue: 'dev');
 
-void main() => runApp(const RishuApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  final controller = AssistantController()..boot();
+  runApp(RishuApp(controller: controller));
+}
 
 class RishuApp extends StatelessWidget {
-  const RishuApp({super.key});
+  const RishuApp({super.key, required this.controller});
+  final AssistantController controller;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Rishu',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6C5CE7),
-          brightness: Brightness.dark,
+      theme: rishuTheme(),
+      home: ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) => AnimatedSwitcher(
+          duration: const Duration(milliseconds: 450),
+          child: switch (controller.phase) {
+            Phase.booting => BootScreen(key: const ValueKey('boot'), controller: controller),
+            Phase.failed => BootScreen(key: const ValueKey('failed'), controller: controller),
+            Phase.onboarding => OnboardingScreen(key: const ValueKey('onboarding'), controller: controller),
+            Phase.ready => HomeScreen(key: const ValueKey('home'), controller: controller),
+          },
         ),
-        scaffoldBackgroundColor: const Color(0xFF0B0B14),
       ),
-      home: const HomeScreen(),
     );
   }
 }
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 6),
-  )..repeat();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+class BootScreen extends StatelessWidget {
+  const BootScreen({super.key, required this.controller});
+  final AssistantController controller;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final failed = controller.phase == Phase.failed;
     return Scaffold(
-      body: SafeArea(
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(0, -0.3),
+            radius: 1.2,
+            colors: [Color(0xFF1B1550), RishuColors.background],
+          ),
+        ),
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 240,
-                height: 240,
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) => CustomPaint(painter: OrbPainter(_controller.value)),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Orb(mood: failed ? OrbMood.offline : OrbMood.connecting, size: 220),
+                const SizedBox(height: 28),
+                Text(
+                  failed ? 'Rishu start nahi ho paaya' : 'Rishu jaag raha hai…',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: RishuColors.text),
                 ),
-              ),
-              const SizedBox(height: 32),
-              Text('Rishu', style: textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              Text('Aapka personal AI assistant', style: textTheme.titleMedium),
-              const SizedBox(height: 24),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 32),
-                child: Text(
-                  'Build $appVersion. Yeh pehla build sirf app ka dhaancha hai; '
-                  'baat-cheet aur kaam karne wale features agle builds mein aa rahe hain.',
-                  textAlign: TextAlign.center,
+                const SizedBox(height: 10),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: Text(
+                    failed
+                        ? controller.bootError
+                        : 'Pehli baar kholne par thoda time lag sakta hai. Version $appVersion',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: RishuColors.muted, height: 1.5),
+                  ),
                 ),
-              ),
-            ],
+                if (failed) ...[
+                  const SizedBox(height: 22),
+                  FilledButton.icon(
+                    onPressed: controller.restart,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Dobara try karo'),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-}
-
-/// The orb: a soft glow, a pulsing core and three slowly rotating rings.
-class OrbPainter extends CustomPainter {
-  OrbPainter(this.t);
-
-  /// Animation progress from 0 to 1.
-  final double t;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final base = size.shortestSide / 2;
-    final pulse = 0.94 + 0.06 * math.sin(t * 2 * math.pi * 3);
-
-    final glow = Paint()
-      ..shader = const RadialGradient(
-        colors: [Color(0x886C5CE7), Color(0x006C5CE7)],
-      ).createShader(Rect.fromCircle(center: center, radius: base));
-    canvas.drawCircle(center, base, glow);
-
-    final coreRadius = base * 0.55 * pulse;
-    final core = Paint()
-      ..shader = const RadialGradient(
-        center: Alignment(-0.3, -0.4),
-        colors: [Color(0xFFB8AEFF), Color(0xFF6C5CE7), Color(0xFF2D1E8F)],
-        stops: [0.0, 0.55, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: coreRadius));
-    canvas.drawCircle(center, coreRadius, core);
-
-    final ring = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = const Color(0x66B8AEFF);
-    for (var i = 0; i < 3; i++) {
-      canvas.save();
-      canvas.translate(center.dx, center.dy);
-      canvas.rotate(t * 2 * math.pi + i * math.pi / 3);
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset.zero, width: base * 1.7, height: base * (0.8 + 0.2 * i)),
-        ring,
-      );
-      canvas.restore();
-    }
-  }
-
-  @override
-  bool shouldRepaint(OrbPainter oldDelegate) => oldDelegate.t != t;
 }
