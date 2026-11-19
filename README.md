@@ -30,6 +30,7 @@ Demo script: [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) · Progress: [docs/PROGRES
 | Reminders | "1 minute baad paani peene ka reminder lagao" (shown and spoken) |
 | Memory | "Yaad rakho: mera favourite subject DAA hai", "kya yaad hai mere baare mein?" |
 | Weather | "Gurugram ka mausam batao" |
+| Screen | "Screen par kya hai, samjhao", "yeh error kya hai?" |
 | Safety | Permission cards before important actions, activity log, keys encrypted on this PC |
 
 ## What is in the repo

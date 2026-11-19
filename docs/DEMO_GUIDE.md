@@ -28,7 +28,8 @@
 | 12 | "Yaad rakho: mera favourite subject DAA hai" → "Nayi baat-cheet" → "Mera favourite subject kya hai?" | Nayi chat mein bhi yaad rehta hai |
 | 13 | "WhatsApp pe likho: main 10 minute late hoon" | Permission card → "Haan" → WhatsApp khulta hai, message type hua; Send aap dabao |
 | 14 | "Awaaz thodi badhao" | Volume badhta hai |
-| 15 | Left mein **Kaam** (Activity) tab | Har kaam ka record: risk level, permission |
+| 15 | Koi webpage ya code screen par kholo, phir: "Screen par kya hai, samjhao" | Rishu screen dekhkar samjhata hai |
+| 15b | Left mein **Kaam** (Activity) tab | Har kaam ka record: risk level, permission |
 | 16 | Settings: awaaz Ladka/Ladki badlo, "Sunao" | Awaaz turant badalti hai |
 
 ## Agar kuch gadbad ho
