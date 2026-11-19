@@ -58,6 +58,9 @@ class Recording:
     pcm: bytes
     heard_speech: bool
     cancelled: bool
+    # Exact digital silence: Windows sends zeros when its privacy setting
+    # blocks desktop apps from the microphone, or the mic is muted in hardware.
+    silent: bool = False
 
     @property
     def seconds(self) -> float:
@@ -176,7 +179,7 @@ class Recorder:
                         continue
                 # The cap matters when the user starts talking at once: the
                 # "noise floor" is then speech, and must not hide it.
-                threshold = max(450.0, min((floor or 0.0) * 2.5, 1200.0))
+                threshold = max(300.0, min((floor or 0.0) * 2.5, 1200.0))
                 peak = max(peak, energy)
                 if energy >= threshold:
                     heard = True
@@ -193,6 +196,7 @@ class Recorder:
                     break
         if self._cancel.is_set():
             return Recording(b"", False, True)
-        if self._finish.is_set() and peak >= 300.0:
+        if self._finish.is_set() and peak >= 200.0:
             heard = True  # the user said they were done: trust that they spoke
-        return Recording(b"".join(blocks), heard, False)
+        silent = not heard and len(blocks) >= 3 and max(rms(b) for b in blocks) < 2.0
+        return Recording(b"".join(blocks), heard, False, silent)

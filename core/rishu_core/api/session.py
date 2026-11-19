@@ -217,9 +217,7 @@ class Session:
             self._state("idle")
             return
         if not recording.heard_speech:
-            self._send(
-                {"v": PROTOCOL_VERSION, "type": "notice", "text": t("not_heard", self._language())}
-            )
+            self._not_heard(recording)
             self._state("idle")
             return
         self._state("thinking")
@@ -346,6 +344,14 @@ class Session:
         )
         return {"ok": True}
 
+    def _not_heard(self, recording: Any) -> None:
+        if getattr(recording, "silent", False):
+            self.error("voice_mic_silent", t("mic_silent", self._language()))
+        else:
+            self._send(
+                {"v": PROTOCOL_VERSION, "type": "notice", "text": t("not_heard", self._language())}
+            )
+
     def _record_and_transcribe(self) -> str | None:
         status = self.runtime.voice.status()
         after = "locked" if self.runtime.lock.locked else "idle"
@@ -365,13 +371,7 @@ class Session:
             return None
         if recording.cancelled or not recording.heard_speech or self._closed:
             if not recording.cancelled:
-                self._send(
-                    {
-                        "v": PROTOCOL_VERSION,
-                        "type": "notice",
-                        "text": t("not_heard", self._language()),
-                    }
-                )
+                self._not_heard(recording)
             self._state(after)
             return None
         self._state("thinking")

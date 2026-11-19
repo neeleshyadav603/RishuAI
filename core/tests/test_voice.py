@@ -177,6 +177,18 @@ def test_recorder_stops_after_silence_following_speech():
 def test_recorder_gives_up_when_nothing_is_said():
     recording = Recorder(fake_source(silence(200)), no_speech_seconds=2).record()
     assert not recording.heard_speech and recording.seconds == pytest.approx(2.0)
+    assert recording.silent  # pure zeros: Windows privacy block or a muted mic
+
+
+def test_recorder_hears_a_quiet_laptop_mic_and_tells_noise_from_zeros():
+    quiet = tone(450, 8)  # RMS ~320: soft speech on a laptop's built-in mic
+    recording = Recorder(
+        fake_source(silence(3) + quiet + silence(20)), silence_seconds=1.0
+    ).record()
+    assert recording.heard_speech and not recording.silent
+    hiss = tone(60, 30)  # room noise only
+    recording = Recorder(fake_source(hiss), no_speech_seconds=2).record()
+    assert not recording.heard_speech and not recording.silent
 
 
 def test_recorder_finish_and_cancel_from_another_thread():
@@ -370,7 +382,7 @@ def test_push_to_talk_runs_a_turn_and_speaks_the_reply(settings, registry, spawn
 
 
 def test_listening_without_speech_sends_a_notice(settings, registry, tmp_path):
-    runtime, seen = voice_runtime(settings, registry, tmp_path, silence(100), "ignored", [])
+    runtime, seen = voice_runtime(settings, registry, tmp_path, tone(60, 100), "ignored", [])
     client = TestClient(create_app(runtime))
     with client.websocket_connect("/ws", headers=AUTH) as ws:
         read_until(ws, "hello")
@@ -379,6 +391,18 @@ def test_listening_without_speech_sends_a_notice(settings, registry, tmp_path):
         events += read_until(ws, "state_change")
     assert "sunai nahi" in events[-2]["text"] and events[-1]["state"] == "idle"
     assert seen == []  # nothing was sent to the speech service
+
+
+def test_a_mic_sending_only_zeros_explains_the_windows_privacy_switch(settings, registry, tmp_path):
+    runtime, seen = voice_runtime(settings, registry, tmp_path, silence(100), "ignored", [])
+    client = TestClient(create_app(runtime))
+    with client.websocket_connect("/ws", headers=AUTH) as ws:
+        read_until(ws, "hello")
+        ws.send_text(json.dumps({"v": 1, "type": "listen_start"}))
+        events = read_until(ws, "error")
+        events += read_until(ws, "state_change")
+    assert events[-2]["code"] == "voice_mic_silent" and "Privacy" in events[-2]["message"]
+    assert events[-1]["state"] == "idle" and seen == []
 
 
 def test_voice_input_needs_a_key(settings, registry, tmp_path):

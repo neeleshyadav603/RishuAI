@@ -16,6 +16,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "denied": "Theek hai, yeh nahi kiya.",
         "step_up_unavailable": "Is kaam ke liye extra security check chahiye, jo abhi set up nahi hai. Isliye yeh nahi kiya.",
         "not_heard": "Mujhe kuch sunai nahi diya. Mic ke paas bol kar dobara try karo.",
+        "mic_silent": "Mic se bilkul bhi awaaz nahi aa rahi. Windows Settings > Privacy & security > Microphone mein "
+        "'Microphone access' aur 'Let desktop apps access your microphone' ON karo, aur mic ka mute button check karo.",
         "voice_input_off": "Voice input abhi available nahi hai",
         "voice_output_failed": "Awaaz mein jawab nahi suna paaya",
         "locked": "Rishu locked hai. Pehle PIN, Windows Hello ya bolkar password se unlock karo.",
@@ -36,6 +38,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "denied": "Okay, I did not do that.",
         "step_up_unavailable": "This action needs an extra security check that is not set up yet, so I did not do it.",
         "not_heard": "I didn't hear anything. Please speak closer to the mic and try again.",
+        "mic_silent": "The microphone sends only silence. In Windows Settings > Privacy & security > Microphone, turn on "
+        "'Microphone access' and 'Let desktop apps access your microphone', and check the mic's mute button.",
         "voice_input_off": "Voice input is not available right now",
         "voice_output_failed": "I couldn't speak the reply aloud",
         "locked": "Rishu is locked. Unlock with your PIN, Windows Hello or your spoken password first.",

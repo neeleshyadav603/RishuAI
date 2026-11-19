@@ -47,101 +47,104 @@ class _LockScreenState extends State<LockScreen> {
     final lock = c.lock;
     final listening = c.mood == OrbMood.listening;
     final checking = c.mood == OrbMood.thinking;
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment(0, -0.35),
-          radius: 1.2,
-          colors: [Color(0xFF1A1440), RishuColors.background],
+    return Scaffold(
+      backgroundColor: RishuColors.background,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(0, -0.35),
+            radius: 1.2,
+            colors: [Color(0xFF1A1440), RishuColors.background],
+          ),
         ),
-      ),
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(32),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 380),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Orb(mood: listening ? OrbMood.listening : OrbMood.locked, level: c.level, size: 150),
-                const SizedBox(height: 18),
-                const Icon(Icons.lock_rounded, color: RishuColors.violet, size: 26),
-                const SizedBox(height: 8),
-                Text(
-                  tr(c, 'Rishu locked hai', 'Rishu is locked'),
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: RishuColors.text),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  listening
-                      ? tr(c, 'Sun raha hoon… apna password bolo', 'Listening… say your password')
-                      : checking
-                          ? tr(c, 'Check kar raha hoon…', 'Checking…')
-                          : tr(c, 'Unlock karne ke liye PIN daalo', 'Enter your PIN to unlock'),
-                  style: const TextStyle(color: RishuColors.muted),
-                ),
-                const SizedBox(height: 22),
-                TextField(
-                  key: const ValueKey('lock-pin'),
-                  controller: _pin,
-                  focusNode: _focus,
-                  obscureText: true,
-                  textAlign: TextAlign.center,
-                  maxLength: 12,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(fontSize: 22, letterSpacing: 10, color: RishuColors.text),
-                  decoration: InputDecoration(
-                    counterText: '',
-                    hintText: '••••',
-                    suffixIcon: IconButton(
-                      tooltip: tr(c, 'Unlock', 'Unlock'),
-                      onPressed: _submit,
-                      icon: const Icon(Icons.arrow_forward_rounded, color: RishuColors.violet),
-                    ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(32),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 380),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Orb(mood: listening ? OrbMood.listening : OrbMood.locked, level: c.level, size: 150),
+                  const SizedBox(height: 18),
+                  const Icon(Icons.lock_rounded, color: RishuColors.violet, size: 26),
+                  const SizedBox(height: 8),
+                  Text(
+                    tr(c, 'Rishu locked hai', 'Rishu is locked'),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: RishuColors.text),
                   ),
-                  onSubmitted: (_) => _submit(),
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 200),
-                  child: c.lockError.isEmpty
-                      ? const SizedBox(height: 14)
-                      : Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: Text(c.lockError,
-                              key: const ValueKey('lock-error'),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: RishuColors.red)),
+                  const SizedBox(height: 6),
+                  Text(
+                    listening
+                        ? tr(c, 'Sun raha hoon… apna password bolo', 'Listening… say your password')
+                        : checking
+                            ? tr(c, 'Check kar raha hoon…', 'Checking…')
+                            : tr(c, 'Unlock karne ke liye PIN daalo', 'Enter your PIN to unlock'),
+                    style: const TextStyle(color: RishuColors.muted),
+                  ),
+                  const SizedBox(height: 22),
+                  TextField(
+                    key: const ValueKey('lock-pin'),
+                    controller: _pin,
+                    focusNode: _focus,
+                    obscureText: true,
+                    textAlign: TextAlign.center,
+                    maxLength: 12,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    style: const TextStyle(fontSize: 22, letterSpacing: 10, color: RishuColors.text),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      hintText: '••••',
+                      suffixIcon: IconButton(
+                        tooltip: tr(c, 'Unlock', 'Unlock'),
+                        onPressed: _submit,
+                        icon: const Icon(Icons.arrow_forward_rounded, color: RishuColors.violet),
+                      ),
+                    ),
+                    onSubmitted: (_) => _submit(),
+                  ),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 200),
+                    child: c.lockError.isEmpty
+                        ? const SizedBox(height: 14)
+                        : Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(c.lockError,
+                                key: const ValueKey('lock-error'),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: RishuColors.red)),
+                          ),
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      if (lock.hello)
+                        OutlinedButton.icon(
+                          onPressed: checking ? null : c.unlockWithHello,
+                          icon: const Icon(Icons.fingerprint_rounded),
+                          label: const Text('Windows Hello'),
                         ),
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    if (lock.hello)
-                      OutlinedButton.icon(
-                        onPressed: checking ? null : c.unlockWithHello,
-                        icon: const Icon(Icons.fingerprint_rounded),
-                        label: const Text('Windows Hello'),
-                      ),
-                    if (lock.phraseSet)
-                      OutlinedButton.icon(
-                        onPressed: listening || checking ? null : c.unlockWithVoice,
-                        icon: const Icon(Icons.mic_rounded),
-                        label: Text(tr(c, 'Bolkar unlock', 'Unlock by voice')),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 22),
-                Text(
-                  tr(c, 'Lock rehte hue Rishu na kuch dikhata hai na kuch karta hai.',
-                      'While locked, Rishu shows nothing and does nothing.'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: RishuColors.muted, fontSize: 12.5),
-                ),
-              ],
+                      if (lock.phraseSet)
+                        OutlinedButton.icon(
+                          onPressed: listening || checking ? null : c.unlockWithVoice,
+                          icon: const Icon(Icons.mic_rounded),
+                          label: Text(tr(c, 'Bolkar unlock', 'Unlock by voice')),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  Text(
+                    tr(c, 'Lock rehte hue Rishu na kuch dikhata hai na kuch karta hai.',
+                        'While locked, Rishu shows nothing and does nothing.'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: RishuColors.muted, fontSize: 12.5),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
