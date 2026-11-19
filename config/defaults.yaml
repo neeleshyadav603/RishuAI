@@ -41,3 +41,7 @@ voice:
     silence_seconds: 1.2   # stop listening after this much silence
     no_speech_seconds: 7   # give up if nothing is said
     max_seconds: 30
+
+security:
+  # Lock Rishu after this many minutes without use (only when a PIN is set; 0 = never).
+  idle_minutes: 10

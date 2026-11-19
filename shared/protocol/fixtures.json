@@ -86,6 +86,14 @@
           "output_reason": "",
           "hotkey": "Ctrl+Shift+Space"
         }
+      },
+      "lock": {
+        "locked": false,
+        "pin_set": true,
+        "phrase_set": false,
+        "hello": true,
+        "idle_minutes": 10,
+        "paused_seconds": 0
       }
     }
   },
@@ -285,6 +293,50 @@
       "v": 1,
       "type": "reminder",
       "text": "Paani peene ka time"
+    }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "lock_state",
+      "locked": true,
+      "pin_set": true,
+      "phrase_set": true,
+      "hello": true,
+      "idle_minutes": 10,
+      "paused_seconds": 0
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "unlock",
+      "method": "pin",
+      "pin": "4826"
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "unlock",
+      "method": "hello"
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "lock"
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "enroll_phrase"
     }
   }
 ]

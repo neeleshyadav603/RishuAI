@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../core/connection.dart';
 import '../state/assistant.dart';
 import 'chat.dart' show tr;
+import 'lock.dart' show SecuritySettings;
 import 'theme.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -156,6 +157,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: const TextStyle(color: RishuColors.muted, fontSize: 12.5),
             ),
           ],
+        ),
+        _Section(
+          icon: Icons.lock_rounded,
+          title: tr(c, 'Suraksha (lock)', 'Security (lock)'),
+          children: [SecuritySettings(controller: c)],
         ),
         _Section(
           icon: Icons.psychology_rounded,

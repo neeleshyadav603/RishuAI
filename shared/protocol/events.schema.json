@@ -95,6 +95,18 @@
     },
     {
       "$ref": "#/$defs/reminder"
+    },
+    {
+      "$ref": "#/$defs/lock_state"
+    },
+    {
+      "$ref": "#/$defs/unlock"
+    },
+    {
+      "$ref": "#/$defs/lock"
+    },
+    {
+      "$ref": "#/$defs/enroll_phrase"
     }
   ],
   "$defs": {
@@ -570,6 +582,29 @@
         },
         "capabilities": {
           "type": "object"
+        },
+        "lock": {
+          "type": "object",
+          "properties": {
+            "locked": {
+              "type": "boolean"
+            },
+            "pin_set": {
+              "type": "boolean"
+            },
+            "phrase_set": {
+              "type": "boolean"
+            },
+            "hello": {
+              "type": "boolean"
+            },
+            "idle_minutes": {
+              "type": "number"
+            },
+            "paused_seconds": {
+              "type": "number"
+            }
+          }
         }
       },
       "required": [
@@ -676,6 +711,74 @@
       "required": [
         "text"
       ]
+    },
+    "lock_state": {
+      "description": "c2a. Rishu was locked or unlocked, or the lock settings changed.",
+      "properties": {
+        "type": {
+          "const": "lock_state"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "pin_set": {
+          "type": "boolean"
+        },
+        "phrase_set": {
+          "type": "boolean"
+        },
+        "hello": {
+          "type": "boolean"
+        },
+        "idle_minutes": {
+          "type": "number"
+        },
+        "paused_seconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "locked",
+        "pin_set"
+      ]
+    },
+    "unlock": {
+      "description": "a2c. Unlock Rishu with the PIN, Windows Hello, or the spoken password (the mic opens).",
+      "properties": {
+        "type": {
+          "const": "unlock"
+        },
+        "method": {
+          "enum": [
+            "pin",
+            "hello",
+            "voice"
+          ]
+        },
+        "pin": {
+          "type": "string",
+          "maxLength": 32
+        }
+      },
+      "required": [
+        "method"
+      ]
+    },
+    "lock": {
+      "description": "a2c. Lock Rishu now (needs a PIN to be set).",
+      "properties": {
+        "type": {
+          "const": "lock"
+        }
+      }
+    },
+    "enroll_phrase": {
+      "description": "a2c. Record a spoken password; the mic opens and the normalized transcript is kept in the encrypted secret store.",
+      "properties": {
+        "type": {
+          "const": "enroll_phrase"
+        }
+      }
     }
   }
 }

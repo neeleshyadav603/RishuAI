@@ -20,7 +20,7 @@ from ..agent import Agent, Approver, build_agent
 from ..config import Settings, data_dir
 from ..llm import AuthError, ChatModel, LLMError, LLMRouter, ProviderUnavailable, QuotaError
 from ..llm.openai_compat import OpenAICompatClient
-from ..security import SecretStore, clean_secret, open_secret_store
+from ..security import LockManager, SecretStore, WindowsHello, clean_secret, open_secret_store
 from ..tools import ToolRegistry, build_registry
 from ..user_settings import UserSettings
 from ..voice import VoiceEngine
@@ -46,6 +46,7 @@ class CoreRuntime:
         transport: httpx.BaseTransport | None = None,
         env: Mapping[str, str] | None = None,
         voice: VoiceEngine | None = None,
+        lock: LockManager | None = None,
     ):
         if len(token) < MIN_TOKEN_LENGTH:
             raise ValueError("the session token is too short")
@@ -68,6 +69,15 @@ class CoreRuntime:
         self.active_session: Any = None
         self.hotkey_enabled = False
         self._due_reminders: list[dict[str, Any]] = []
+        self._announced_while_locked = 0
+        self.lock = lock or LockManager(
+            self.home / "lock.json",
+            hello=WindowsHello(self.home / "security"),
+            secrets=self.secrets,
+            idle_minutes=float(settings.defaults.get("security", {}).get("idle_minutes", 10)),
+        )
+        if self.lock.hello is not None:
+            self.lock.hello.prefetch(self.lock_changed)
         self.voice = voice or VoiceEngine(
             settings.defaults.get("voice", {}),
             settings.models.get("speech", {}),
@@ -277,6 +287,13 @@ class CoreRuntime:
         session = self.active_session
         if session is None or not self._due_reminders:
             return 0
+        if self.lock.locked:
+            # Keep them for after unlocking; say only that one is due.
+            if len(self._due_reminders) > self._announced_while_locked:
+                self._announced_while_locked = len(self._due_reminders)
+                session.announce_locked_reminder()
+            return 0
+        self._announced_while_locked = 0
         delivered = 0
         while self._due_reminders:
             item = self._due_reminders.pop(0)
@@ -288,8 +305,34 @@ class CoreRuntime:
         while not stop.wait(interval):
             try:
                 self.check_reminders()
+                self.check_idle_lock()
             except Exception:  # noqa: BLE001, S110 - keep the loop alive
                 pass
+
+    # ---- lock ------------------------------------------------------------------
+
+    def check_idle_lock(self) -> bool:
+        session = self.active_session
+        if session is not None and session.busy:
+            self.lock.touch()  # never lock in the middle of a task
+            return False
+        if self.lock.idle_due():
+            self.lock_now()
+            return True
+        return False
+
+    def lock_now(self) -> bool:
+        if not self.lock.lock():
+            return False
+        session = self.active_session
+        if session is not None:
+            session.locked()
+        return True
+
+    def lock_changed(self) -> None:
+        session = self.active_session
+        if session is not None:
+            session.send_lock_state()
 
     # ---- the global shortcut ------------------------------------------------
 
@@ -319,6 +362,7 @@ class CoreRuntime:
             "version": __version__,
             "settings": self.public_settings(),
             "providers": self.providers(),
+            "lock": self.lock.status(),
             "capabilities": {
                 "step_up": False,  # arrives with the security module (Phase 3)
                 "secure_store": self.secrets.kind,

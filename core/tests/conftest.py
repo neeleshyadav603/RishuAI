@@ -3,6 +3,7 @@ from datetime import datetime
 import pytest
 
 from rishu_core.config import load_settings
+from rishu_core.security import WindowsHello
 from rishu_core.tools import build_registry
 from rishu_core.tools.apps import AppLauncher
 from rishu_core.tools.system import SystemControls
@@ -72,3 +73,9 @@ def registry(settings, spawned, opened_urls, tmp_path):
 def silent_voice(monkeypatch):
     """Tests never speak through the real sound card (Windows CI has one)."""
     monkeypatch.setattr(voice_engine, "default_player", NullPlayer)
+
+
+@pytest.fixture(autouse=True)
+def no_windows_hello_check(monkeypatch):
+    """Tests never start the real Windows Hello PowerShell check."""
+    monkeypatch.setattr(WindowsHello, "prefetch", lambda self, on_done=None: None)

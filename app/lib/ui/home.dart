@@ -126,6 +126,15 @@ class _Sidebar extends StatelessWidget {
           _NavButton(icon: Icons.history_rounded, label: tr(c, 'Kaam', 'Activity'), selected: tab == 1, onTap: () => onTab(1)),
           _NavButton(icon: Icons.tune_rounded, label: tr(c, 'Settings', 'Settings'), selected: tab == 2, onTap: () => onTab(2)),
           const Spacer(),
+          if (c.lock.pinSet)
+            Tooltip(
+              message: tr(c, 'Rishu lock karo (ya bolo "Rishu lock")', 'Lock Rishu (or say "Rishu lock")'),
+              child: IconButton(
+                key: const ValueKey('sidebar-lock'),
+                onPressed: c.lockNow,
+                icon: const Icon(Icons.lock_outline_rounded, color: RishuColors.muted),
+              ),
+            ),
           Tooltip(
             message: tr(c, 'Nayi baat-cheet (Ctrl+N)', 'New conversation (Ctrl+N)'),
             child: IconButton(

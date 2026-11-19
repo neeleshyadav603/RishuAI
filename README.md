@@ -31,6 +31,7 @@ Demo script: [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) · Progress: [docs/PROGRES
 | Memory | "Yaad rakho: mera favourite subject DAA hai", "kya yaad hai mere baare mein?" |
 | Weather | "Gurugram ka mausam batao" |
 | Screen | "Screen par kya hai, samjhao", "yeh error kya hai?" |
+| Lock | PIN, Windows Hello or a spoken password; "Rishu lock" locks at once, auto-lock when idle |
 | Safety | Permission cards before important actions, activity log, keys encrypted on this PC |
 
 ## What is in the repo

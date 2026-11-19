@@ -120,6 +120,23 @@ class VoiceCaps {
   final String hotkey;
 }
 
+/// The core's lock status (PIN, spoken password, Windows Hello).
+class LockInfo {
+  LockInfo([Map<String, dynamic>? e])
+      : locked = e?['locked'] == true,
+        pinSet = e?['pin_set'] == true,
+        phraseSet = e?['phrase_set'] == true,
+        hello = e?['hello'] == true,
+        idleMinutes = ((e?['idle_minutes'] as num?) ?? 10).toDouble(),
+        pausedSeconds = ((e?['paused_seconds'] as num?) ?? 0).toInt();
+  final bool locked;
+  final bool pinSet;
+  final bool phraseSet;
+  final bool hello;
+  final double idleMinutes;
+  final int pausedSeconds;
+}
+
 typedef Connector = Future<CoreConnection> Function();
 
 Future<CoreConnection> connectToBundledCore() async {
@@ -148,6 +165,8 @@ class AssistantController extends ChangeNotifier {
   Map<String, dynamic> settings = {};
   List<Provider> providers = [];
   VoiceCaps voice = VoiceCaps();
+  LockInfo lock = LockInfo();
+  String lockError = '';
   double approvalTimeout = 120;
   bool disconnected = false;
   bool _skippedSetup = false;
@@ -163,6 +182,7 @@ class AssistantController extends ChangeNotifier {
   String get userName => '${settings['user_name'] ?? ''}';
   String get language => '${settings['language'] ?? 'auto'}';
   bool get english => language == 'en';
+  bool get locked => lock.locked;
 
   // ---- lifecycle --------------------------------------------------------
 
@@ -243,8 +263,13 @@ class AssistantController extends ChangeNotifier {
         items.add(NoticeItem('${e['text'] ?? ''}'));
       case 'reminder':
         items.add(NoticeItem('⏰ ${e['text'] ?? ''}', reminder: true));
+      case 'lock_state':
+        _lockState(e);
       case 'error':
-        if (e['code'] != 'no_such_approval') {
+        final code = '${e['code'] ?? ''}';
+        if (locked && (code == 'locked' || code.startsWith('unlock_') || code.startsWith('voice_'))) {
+          lockError = '${e['message'] ?? ''}';
+        } else if (code != 'no_such_approval') {
           items.add(NoticeItem('${e['message'] ?? 'Kuch gadbad ho gayi.'}', error: true));
         }
       case 'voice_status':
@@ -262,10 +287,23 @@ class AssistantController extends ChangeNotifier {
     final caps = Map<String, dynamic>.from(e['capabilities'] as Map? ?? {});
     voice = VoiceCaps(caps['voice'] is Map ? Map<String, dynamic>.from(caps['voice'] as Map) : null);
     approvalTimeout = ((caps['approval_timeout_seconds'] as num?) ?? 120).toDouble();
+    lock = LockInfo(e['lock'] is Map ? Map<String, dynamic>.from(e['lock'] as Map) : null);
     disconnected = false;
     mood = OrbMood.idle;
     final firstRun = !hasBrain && userName.isEmpty && !_skippedSetup;
     phase = firstRun ? Phase.onboarding : Phase.ready;
+  }
+
+  void _lockState(Map<String, dynamic> e) {
+    final wasLocked = lock.locked;
+    lock = LockInfo(e);
+    if (lock.locked && !wasLocked) {
+      // Nothing private stays on screen behind the lock.
+      items.clear();
+      _streaming = null;
+      lockError = '';
+    }
+    if (!lock.locked) lockError = '';
   }
 
   void _token(Map<String, dynamic> e) {
@@ -439,6 +477,55 @@ class AssistantController extends ChangeNotifier {
     _core?.send({'type': 'new_conversation'});
     items.clear();
     _streaming = null;
+    notifyListeners();
+  }
+
+  // ---- lock ------------------------------------------------------------------
+
+  void unlockWithPin(String pin) {
+    lockError = '';
+    _core?.send({'type': 'unlock', 'method': 'pin', 'pin': pin});
+    notifyListeners();
+  }
+
+  void unlockWithHello() {
+    lockError = '';
+    _core?.send({'type': 'unlock', 'method': 'hello'});
+    notifyListeners();
+  }
+
+  void unlockWithVoice() {
+    lockError = '';
+    if (!voice.input) {
+      lockError = english ? 'The microphone is not available. Use your PIN.' : 'Mic available nahi hai. PIN se unlock karo.';
+      notifyListeners();
+      return;
+    }
+    _core?.send({'type': 'unlock', 'method': 'voice'});
+    mood = OrbMood.listening;
+    notifyListeners();
+  }
+
+  void lockNow() => _core?.send({'type': 'lock'});
+
+  void enrollPhrase() {
+    _core?.send({'type': 'enroll_phrase'});
+    mood = OrbMood.listening;
+    notifyListeners();
+  }
+
+  Future<void> setPin(String pin, {String? current}) async {
+    lock = LockInfo(await _req('PUT', '/v1/lock/pin', {'pin': pin, if (current != null) 'current': current}));
+    notifyListeners();
+  }
+
+  Future<void> removePin(String current) async {
+    lock = LockInfo(await _req('POST', '/v1/lock/remove', {'current': current}));
+    notifyListeners();
+  }
+
+  Future<void> removePhrase() async {
+    lock = LockInfo(await _req('DELETE', '/v1/lock/phrase'));
     notifyListeners();
   }
 

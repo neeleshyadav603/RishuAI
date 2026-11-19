@@ -31,6 +31,7 @@
 | 15 | Koi webpage ya code screen par kholo, phir: "Screen par kya hai, samjhao" | Rishu screen dekhkar samjhata hai |
 | 15b | Left mein **Kaam** (Activity) tab | Har kaam ka record: risk level, permission |
 | 16 | Settings: awaaz Ladka/Ladki badlo, "Sunao" | Awaaz turant badalti hai |
+| 17 | Settings → Suraksha: PIN set karo, phir bolo **"Rishu lock"** | Rishu turant lock; chat screen se hat jaati hai. PIN (ya Windows Hello / bolkar password) se unlock |
 
 ## Agar kuch gadbad ho
 

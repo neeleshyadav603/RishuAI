@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import 'state/assistant.dart';
 import 'ui/home.dart';
+import 'ui/lock.dart';
 import 'ui/onboarding.dart';
 import 'ui/orb.dart';
 import 'ui/theme.dart';
@@ -64,6 +65,7 @@ class RishuApp extends StatelessWidget {
             Phase.booting => BootScreen(key: const ValueKey('boot'), controller: controller),
             Phase.failed => BootScreen(key: const ValueKey('failed'), controller: controller),
             Phase.onboarding => OnboardingScreen(key: const ValueKey('onboarding'), controller: controller),
+            Phase.ready when controller.locked => LockScreen(key: const ValueKey('lock'), controller: controller),
             Phase.ready => HomeScreen(key: const ValueKey('home'), controller: controller),
           },
         ),

@@ -57,7 +57,51 @@ def create_app(runtime: CoreRuntime) -> FastAPI:
             "protocol": PROTOCOL_VERSION,
         }
 
-    @app.get("/v1/settings", dependencies=guard)
+    def unlocked() -> None:
+        if runtime.lock.locked:
+            raise HTTPException(status_code=423, detail="Rishu is locked")
+
+    private = [*guard, Depends(unlocked)]
+
+    @app.get("/v1/lock", dependencies=guard)
+    async def lock_status() -> dict[str, Any]:
+        return await asyncio.to_thread(runtime.lock.status)
+
+    @app.put("/v1/lock/pin", dependencies=private)
+    async def set_pin(request: Request) -> dict[str, Any]:
+        body = await _json_object(request)
+        pin, current = body.get("pin"), body.get("current")
+        if not isinstance(pin, str) or (current is not None and not isinstance(current, str)):
+            raise HTTPException(status_code=422, detail="pin must be text")
+        try:
+            await asyncio.to_thread(runtime.lock.set_pin, pin, current)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        runtime.lock_changed()
+        return runtime.lock.status()
+
+    @app.post("/v1/lock/remove", dependencies=private)
+    async def remove_pin(request: Request) -> dict[str, Any]:
+        body = await _json_object(request)
+        current = body.get("current")
+        if not isinstance(current, str):
+            raise HTTPException(status_code=422, detail="current must be text")
+        try:
+            await asyncio.to_thread(runtime.lock.remove_pin, current)
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        runtime.lock_changed()
+        return runtime.lock.status()
+
+    @app.delete("/v1/lock/phrase", dependencies=private)
+    async def remove_phrase() -> dict[str, Any]:
+        runtime.lock.remove_phrase()
+        runtime.lock_changed()
+        return runtime.lock.status()
+
+    @app.get("/v1/settings", dependencies=private)
     async def get_settings() -> dict[str, Any]:
         return {
             "settings": runtime.public_settings(),
@@ -66,7 +110,7 @@ def create_app(runtime: CoreRuntime) -> FastAPI:
             "keys_persist": bool(runtime.secrets.persistent),
         }
 
-    @app.put("/v1/settings", dependencies=guard)
+    @app.put("/v1/settings", dependencies=private)
     async def put_settings(request: Request) -> dict[str, Any]:
         patch = await _json_object(request)
         try:
@@ -75,7 +119,7 @@ def create_app(runtime: CoreRuntime) -> FastAPI:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {"settings": settings}
 
-    @app.put("/v1/providers/{name}/key", dependencies=guard)
+    @app.put("/v1/providers/{name}/key", dependencies=private)
     async def put_key(name: str, request: Request) -> dict[str, Any]:
         body = await _json_object(request)
         key = body.get("api_key")
@@ -87,12 +131,12 @@ def create_app(runtime: CoreRuntime) -> FastAPI:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {"providers": runtime.providers(), "keys_persist": bool(runtime.secrets.persistent)}
 
-    @app.delete("/v1/providers/{name}/key", dependencies=guard)
+    @app.delete("/v1/providers/{name}/key", dependencies=private)
     async def delete_key(name: str) -> dict[str, Any]:
         runtime.delete_api_key(name)
         return {"providers": runtime.providers()}
 
-    @app.post("/v1/providers/{name}/test", dependencies=guard)
+    @app.post("/v1/providers/{name}/test", dependencies=private)
     async def test_provider(name: str, request: Request) -> dict[str, Any]:
         body = await _json_object(request, allow_empty=True)
         key = body.get("api_key")
@@ -104,7 +148,7 @@ def create_app(runtime: CoreRuntime) -> FastAPI:
     async def voice_status() -> dict[str, Any]:
         return await asyncio.to_thread(runtime.voice.status, True)
 
-    @app.get("/v1/activity", dependencies=guard)
+    @app.get("/v1/activity", dependencies=private)
     async def activity(limit: int = 50) -> dict[str, Any]:
         log = ActivityLog(runtime.home / "activity.jsonl")
         return {"entries": log.tail(max(1, min(limit, 500)))}
@@ -158,6 +202,8 @@ async def _serve_connection(runtime: CoreRuntime, websocket: WebSocket) -> None:
     turns: set[asyncio.Task[None]] = set()
     max_chars = int(runtime.server_option("max_message_chars", 8000))
     send(runtime.hello())
+    if runtime.lock.locked:
+        session.locked()
     try:
         while True:
             raw = await websocket.receive_text()
@@ -172,6 +218,8 @@ async def _serve_connection(runtime: CoreRuntime, websocket: WebSocket) -> None:
                     session.error("bad_frame", "user_message needs text.")
                 elif len(text) > max_chars:
                     session.error("too_long", f"Messages can be up to {max_chars} characters.")
+                elif session.handle_text(text.strip()) != "ok":
+                    pass  # locked, or the panic phrase locked Rishu
                 elif not session.try_begin_turn():
                     session.error("busy", "Rishu is still working on the previous message.")
                 else:
@@ -180,6 +228,34 @@ async def _serve_connection(runtime: CoreRuntime, websocket: WebSocket) -> None:
                     task.add_done_callback(turns.discard)
             elif kind == "stop":
                 session.stop()
+            elif kind == "unlock":
+                method, pin = event.get("method"), event.get("pin")
+                if method == "pin" and isinstance(pin, str) and len(pin) <= 32:
+                    await asyncio.to_thread(session.unlock, "pin", pin)
+                elif method == "hello":
+                    task = asyncio.create_task(asyncio.to_thread(session.unlock, "hello", None))
+                    turns.add(task)
+                    task.add_done_callback(turns.discard)
+                elif method == "voice":
+                    task = asyncio.create_task(asyncio.to_thread(session.unlock_by_voice))
+                    turns.add(task)
+                    task.add_done_callback(turns.discard)
+                else:
+                    session.error(
+                        "bad_frame", "unlock needs method pin (with pin), hello or voice."
+                    )
+            elif kind == "lock":
+                if not runtime.lock_now():
+                    session.notice_lock_needs_pin()
+            elif kind == "enroll_phrase":
+                if runtime.lock.locked:
+                    session.error("locked", "Unlock Rishu first.")
+                else:
+                    task = asyncio.create_task(asyncio.to_thread(session.enroll_phrase))
+                    turns.add(task)
+                    task.add_done_callback(turns.discard)
+            elif runtime.lock.locked and kind in ("approval_response", "new_conversation", "speak"):
+                session.error("locked", "Rishu is locked.")
             elif kind == "approval_response":
                 call_id, approved = event.get("call_id"), event.get("approved")
                 if isinstance(call_id, str) and isinstance(approved, bool):

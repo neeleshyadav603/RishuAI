@@ -116,8 +116,23 @@ Published **v0.1.0** (Windows installer). Added for the demo, ahead of their pha
       (simple Phase 4 memory; not encrypted yet — move to the encrypted store in Phase 3/4)
 - [x] Weather from Open-Meteo (free; non-commercial terms: check before a paid product)
 - [x] CI: installed-app smoke test on Windows; real-model end-to-end with Ollama
+- [x] Screen vision (`look_at_screen`): scaled screenshot to a Groq vision model (v0.3.0)
+- [x] Phase 3 start — lock (v0.4.0): PIN (salted scrypt hash, pause after 5
+      wrong tries), Windows Hello (fingerprint/face/Windows PIN via
+      UserConsentVerifier), spoken password (normalized transcript in the DPAPI
+      secret store, fuzzy match; only unlocks, never approves), panic phrase
+      "Rishu lock", auto-lock after 10 idle minutes, lock screen in the app;
+      while locked the core refuses chat, actions, settings, keys and the
+      activity log (HTTP 423), and due reminders are announced without details
 
-## Phases 3–10
+## Phase 3 — Security (remaining)
+
+- [ ] R3 step-up with two factors (PIN + Windows Hello) in the approval card
+- [ ] Face unlock with the camera (opt-in; liveness check) — Windows Hello face already works where the PC has an IR camera
+- [ ] Encrypt the memory and reminder files (DPAPI) and the conversation history
+- [ ] Voice biometrics (speaker verification) on top of the spoken-password transcript
+
+## Phases 4–10
 
 See spec §14. Break each phase into checklist items here when it starts.
 
@@ -131,6 +146,9 @@ See spec §14. Break each phase into checklist items here when it starts.
 - Live `ddgs` search and `read_page` against real sites (the workspace blocks
   outbound web requests, so only mocked transports were tested).
 - Model IDs in `config/models.yaml` against live Groq/Gemini `/models` lists.
+- Lock: Windows Hello dialog on a PC with fingerprint/face/Windows PIN set up
+  (the PowerShell WinRT call is tested here only with a fake runner); spoken
+  password with a real mic and Groq Whisper.
 
 ## Known issues
 

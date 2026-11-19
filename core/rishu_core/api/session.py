@@ -8,6 +8,7 @@ from typing import Any
 
 from ..agent import Agent, ApprovalRequest
 from ..permissions import Risk
+from ..security import is_panic_phrase
 from ..strings import t
 from ..voice import MicError, Speaker, SttError, to_wav
 from .runtime import PROTOCOL_VERSION, CoreRuntime
@@ -190,6 +191,10 @@ class Session:
 
     def listen(self) -> None:
         """Push-to-talk: record, transcribe, then run the turn. Blocking (worker thread)."""
+        if self.runtime.lock.locked:
+            self.unlock_by_voice()
+            return
+        self.runtime.lock.touch()
         status = self.runtime.voice.status()
         if not status["input"]:
             reason = status.get("input_reason") or ""
@@ -238,6 +243,11 @@ class Session:
         self._send(
             {"v": PROTOCOL_VERSION, "type": "transcript_final", "text": text, "language": language}
         )
+        if self.handle_text(text) != "ok":
+            if self.runtime.lock.locked:
+                return
+            self._state("idle")
+            return
         if not self.try_begin_turn():
             self.error("busy", "Rishu is still working on the previous message.")
             return
@@ -248,6 +258,134 @@ class Session:
 
     def listen_stop(self) -> None:
         self.recorder.finish()
+
+    # ---- lock --------------------------------------------------------------
+
+    def send_lock_state(self) -> None:
+        self._send({"v": PROTOCOL_VERSION, "type": "lock_state", **self.runtime.lock.status()})
+
+    def locked(self) -> None:
+        """Rishu was just locked: stop everything and tell the app."""
+        self.stop()
+        if self._agent is not None and not self.busy:
+            self._agent.reset()  # a locked screen must not keep the conversation
+        self.send_lock_state()
+        self._state("locked")
+
+    def notice_lock_needs_pin(self) -> None:
+        self._send(
+            {"v": PROTOCOL_VERSION, "type": "notice", "text": t("lock_needs_pin", self._language())}
+        )
+
+    def unlock(self, method: str, pin: str | None) -> None:
+        """PIN or Windows Hello unlock (Hello blocks while its dialog is open)."""
+        lock = self.runtime.lock
+        if method == "pin":
+            ok, code = lock.unlock_pin(pin or "")
+        else:
+            ok, code = lock.unlock_hello()
+        self.send_lock_state()
+        if ok:
+            self._state("idle")
+            return
+        key = {"paused": "unlock_paused", "no_hello": "unlock_no_hello"}.get(code, "unlock_failed")
+        self.error(f"unlock_{code}", t(key, self._language()))
+
+    def announce_locked_reminder(self) -> None:
+        """A reminder is due while locked: say so without reading it out."""
+        self.speaker.say(
+            t("reminder_while_locked", self._language()),
+            self.runtime.public_settings().get("voice_gender", "male"),
+        )
+
+    def handle_text(self, text: str) -> str:
+        """Before a turn: 'ok' to run it, 'handled' when done here, or 'locked'."""
+        lock = self.runtime.lock
+        if is_panic_phrase(text):
+            if not self.runtime.lock_now():
+                self.notice_lock_needs_pin()
+            return "handled"
+        if lock.locked:
+            self.error("locked", t("locked", self._language()))
+            return "locked"
+        lock.touch()
+        return "ok"
+
+    def unlock_by_voice(self) -> None:
+        """While locked, the mic hears the spoken password. Blocking (worker thread)."""
+        lock = self.runtime.lock
+        if not lock.phrase_set:
+            self.error("locked", t("locked", self._language()))
+            return
+        text = self._record_and_transcribe()
+        if text is None:
+            return
+        ok, code = lock.unlock_phrase(text)
+        self.send_lock_state()
+        self._state("idle" if ok else "locked")
+        if not ok:
+            key = "unlock_paused" if code == "paused" else "unlock_failed"
+            self.error(f"unlock_{code}", t(key, self._language()))
+
+    def enroll_phrase(self) -> dict[str, Any]:
+        """Record the spoken password (Settings). Blocking."""
+        text = self._record_and_transcribe()
+        if not text:
+            return {"ok": False, "code": "not_heard"}
+        try:
+            self.runtime.lock.set_phrase(text)
+        except (ValueError, PermissionError) as exc:
+            self._state("idle")
+            key = "phrase_too_short" if isinstance(exc, ValueError) else "lock_needs_pin"
+            self.error("phrase_invalid", t(key, self._language()))
+            return {"ok": False, "code": "invalid"}
+        self._state("idle")
+        self.send_lock_state()
+        self._send(
+            {"v": PROTOCOL_VERSION, "type": "notice", "text": t("phrase_saved", self._language())}
+        )
+        return {"ok": True}
+
+    def _record_and_transcribe(self) -> str | None:
+        status = self.runtime.voice.status()
+        after = "locked" if self.runtime.lock.locked else "idle"
+        if not status["input"]:
+            reason = status.get("input_reason") or ""
+            self.error("voice_unavailable", f"{t('voice_input_off', self._language())}: {reason}.")
+            return None
+        if self.recorder.active:
+            return None
+        self.stop_speaking()
+        self._state("listening")
+        try:
+            recording = self.recorder.record(on_level=self._audio_level)
+        except MicError as exc:
+            self.error("voice_mic", str(exc))
+            self._state(after)
+            return None
+        if recording.cancelled or not recording.heard_speech or self._closed:
+            if not recording.cancelled:
+                self._send(
+                    {
+                        "v": PROTOCOL_VERSION,
+                        "type": "notice",
+                        "text": t("not_heard", self._language()),
+                    }
+                )
+            self._state(after)
+            return None
+        self._state("thinking")
+        language = "en" if self.runtime.public_settings().get("language") == "en" else "hi"
+        try:
+            transcriber = self.runtime.voice.transcriber()
+            try:
+                return transcriber.transcribe(to_wav(recording.pcm), language=language)
+            finally:
+                transcriber.close()
+        except SttError as exc:
+            self.error(f"voice_{exc.code}", str(exc))
+            self._state(after)
+            return None
 
     def deliver_reminder(self, text: str) -> None:
         self._send({"v": PROTOCOL_VERSION, "type": "reminder", "text": text})
@@ -262,6 +400,8 @@ class Session:
             threading.Thread(target=self.listen, name="rishu-listen", daemon=True).start()
 
     def speak(self, text: str) -> None:
+        if self.runtime.lock.locked:
+            return
         if not self.speaker.say(text, self.runtime.public_settings().get("voice_gender", "male")):
             self.error("voice_output", t("voice_output_failed", self._language()) + ".")
 

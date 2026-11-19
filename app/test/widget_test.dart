@@ -31,7 +31,7 @@ class FakeCore implements CoreConnection {
   Future<void> close() async {}
 }
 
-Map<String, dynamic> hello({bool configured = true, String name = 'Neelesh'}) => {
+Map<String, dynamic> hello({bool configured = true, String name = 'Neelesh', bool locked = false}) => {
       'v': 1,
       'type': 'hello',
       'protocol': 1,
@@ -47,6 +47,7 @@ Map<String, dynamic> hello({bool configured = true, String name = 'Neelesh'}) =>
       'providers': [
         {'name': 'groq', 'label': 'Groq', 'local': false, 'configured': configured, 'key_url': ''},
       ],
+      'lock': {'locked': locked, 'pin_set': locked, 'phrase_set': locked, 'hello': false, 'idle_minutes': 10},
       'capabilities': {
         'step_up': false,
         'approval_timeout_seconds': 120,
@@ -161,6 +162,49 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.textContaining('Chrome khol diya!'), findsOneWidget);
     expect(find.byIcon(Icons.mic_rounded), findsWidgets);
+  });
+
+  test('lock state clears the chat and routes unlock errors to the lock screen', () async {
+    final (c, core) = await started();
+    c.sendText('Mera secret note');
+    core.controller.add({'v': 1, 'type': 'lock_state', 'locked': true, 'pin_set': true});
+    core.controller.add({'v': 1, 'type': 'error', 'code': 'unlock_wrong', 'message': 'Password match nahi hua.'});
+    await Future<void>.delayed(Duration.zero);
+    expect(c.locked, isTrue);
+    expect(c.items, isEmpty);
+    expect(c.lockError, 'Password match nahi hua.');
+    c.unlockWithPin('4826');
+    expect(core.sent.last, {'type': 'unlock', 'method': 'pin', 'pin': '4826'});
+    expect(c.lockError, isEmpty);
+    core.controller.add({'v': 1, 'type': 'lock_state', 'locked': false, 'pin_set': true});
+    await Future<void>.delayed(Duration.zero);
+    expect(c.locked, isFalse);
+  });
+
+  testWidgets('a locked Rishu shows the lock screen and unlocks with the PIN', (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final core = FakeCore();
+    final controller = AssistantController(connector: () async => core);
+    await tester.runAsync(() async {
+      await controller.boot();
+      core.controller.add(hello(locked: true));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+    await tester.pumpWidget(RishuApp(controller: controller));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Rishu locked hai'), findsOneWidget);
+    expect(find.textContaining('Namaste, Neelesh'), findsNothing);
+    expect(find.text('Bolkar unlock'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('lock-pin')), '4826');
+    await tester.tap(find.byTooltip('Unlock'));
+    await tester.pump();
+    expect(core.sent.last, {'type': 'unlock', 'method': 'pin', 'pin': '4826'});
+    controller.handleEvent({'v': 1, 'type': 'lock_state', 'locked': false, 'pin_set': true, 'phrase_set': true});
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.textContaining('Namaste, Neelesh'), findsOneWidget);
+    expect(find.byKey(const ValueKey('sidebar-lock')), findsOneWidget);
   });
 
   testWidgets('boot failure shows a retry button', (tester) async {
