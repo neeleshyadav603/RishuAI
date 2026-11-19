@@ -197,8 +197,11 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      # Windows only for now: the Android app needs its own on-phone core
+      # (Phase 7) before it is useful, so its APK is not published yet.
       - uses: actions/download-artifact@v4
         with:
+          pattern: rishu-windows
           path: release-files
           merge-multiple: true
       - name: Create or update the release
