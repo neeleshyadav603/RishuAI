@@ -245,3 +245,57 @@ def test_weather_unknown_place_and_offline():
         raise httpx.ConnectError("offline", request=request)
 
     assert "not reachable" in weather("Delhi", transport=httpx.MockTransport(down)).content
+
+
+# ---- vision -----------------------------------------------------------------------
+
+
+def test_look_at_screen_sends_a_jpeg_and_marks_the_answer_untrusted(tmp_path):
+    from rishu_core.tools.vision import look_at_screen
+
+    asked = []
+
+    def capture(path):
+        path.write_bytes(b"\xff\xd8jpeg")
+        return True
+
+    def ask(question, jpeg):
+        asked.append((question, jpeg))
+        return "VS Code mein ek Python error dikh raha hai: NameError."
+
+    result = look_at_screen("Yeh error kya hai?", capture, ask)
+    assert result.ok and result.untrusted and "NameError" in result.content
+    assert asked == [("Yeh error kya hai?", b"\xff\xd8jpeg")]
+    assert not look_at_screen("x", lambda p: False, ask).ok
+    assert not look_at_screen("x", capture, None).ok
+
+    def broken(question, jpeg):
+        raise RuntimeError("quota")
+
+    assert "quota" in look_at_screen("x", capture, broken).content
+
+
+def test_runtime_vision_call_uses_the_vision_role(settings, registry, tmp_path):
+    seen = []
+
+    class FakeLLM:
+        def chat(self, role, messages, tools=None, stream=None):
+            from rishu_core.llm import LLMResponse
+
+            seen.append((role, messages))
+            return LLMResponse(content="Ek browser khula hai.")
+
+    runtime = CoreRuntime(
+        settings,
+        token=TOKEN,
+        home=tmp_path,
+        secrets=SecretMemoryStore(),
+        llm=FakeLLM(),
+        registry=registry,
+        env={},
+    )
+    assert runtime.ask_vision("kya hai?", b"jpeg") == "Ek browser khula hai."
+    role, messages = seen[0]
+    assert role == "vision"
+    image = messages[1]["content"][1]["image_url"]["url"]
+    assert image.startswith("data:image/jpeg;base64,")

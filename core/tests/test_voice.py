@@ -457,4 +457,7 @@ def test_start_hotkey_is_windows_only():
 
 
 def test_emoji_are_not_spoken():
-    assert clean_for_speech("Badhiya! 🎉🚀 Chalo shuru karte hain ✅") == "Badhiya! Chalo shuru karte hain."
+    assert (
+        clean_for_speech("Badhiya! 🎉🚀 Chalo shuru karte hain ✅")
+        == "Badhiya! Chalo shuru karte hain."
+    )

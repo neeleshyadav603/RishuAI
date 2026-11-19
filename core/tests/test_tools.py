@@ -184,6 +184,7 @@ def test_every_tool_has_a_valid_schema(registry):
         "list_notes",
         "list_reminders",
         "lock_computer",
+        "look_at_screen",
         "open_app",
         "open_url",
         "play_youtube",

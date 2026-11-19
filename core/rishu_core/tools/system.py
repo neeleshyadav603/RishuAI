@@ -99,6 +99,42 @@ class SystemControls:
             return ToolResult(False, "Screenshot failed.")
         return ToolResult(True, f"Screenshot saved: {path}", data={"path": str(path)})
 
+    def capture_jpeg(self, path: Path, max_width: int = 1280) -> bool:
+        """A smaller JPEG of the whole screen, for the vision model."""
+        if self.platform != "win32":
+            return False
+        script = (
+            "Add-Type -AssemblyName System.Windows.Forms,System.Drawing;"
+            "$b=[System.Windows.Forms.SystemInformation]::VirtualScreen;"
+            "$bmp=New-Object System.Drawing.Bitmap $b.Width,$b.Height;"
+            "$g=[System.Drawing.Graphics]::FromImage($bmp);"
+            "$g.CopyFromScreen($b.Left,$b.Top,0,0,$bmp.Size);"
+            "$w=[Math]::Min([int]$args[1],$b.Width);$h=[int]($b.Height*$w/$b.Width);"
+            "$small=New-Object System.Drawing.Bitmap $bmp,$w,$h;"
+            "$codec=[System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders()|Where-Object{$_.MimeType -eq 'image/jpeg'};"
+            "$p=New-Object System.Drawing.Imaging.EncoderParameters 1;"
+            "$p.Param[0]=New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality,[long]70);"
+            "$small.Save($args[0],$codec,$p)"
+        )
+        try:
+            result = self._run(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-Command",
+                    f"& {{{script}}}",
+                    str(path),
+                    str(max_width),
+                ],
+                capture_output=True,
+                timeout=20,
+                creationflags=CREATE_NO_WINDOW,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        return result.returncode == 0 and path.exists() and path.stat().st_size > 0
+
     def lock_pc(self) -> ToolResult:
         if problem := self._windows_only():
             return problem

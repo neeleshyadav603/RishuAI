@@ -161,6 +161,13 @@ def voicetest() -> int:
                     print(f"{name}: FAILED for {text!r}: {exc}")
                     if name == "windows voice" and text.isascii():
                         ok = False
+    from .tools.system import SystemControls
+
+    with tempfile.TemporaryDirectory() as tmp:
+        shot = Path(tmp) / "screen.jpg"
+        captured = SystemControls().capture_jpeg(shot)
+        size = shot.stat().st_size if captured else 0
+        print(f"screen capture for vision: {'ok' if captured else 'FAILED'} ({size} bytes)")
     print("voicetest ok" if ok else "voicetest FAILED")
     return 0 if ok else 1
 

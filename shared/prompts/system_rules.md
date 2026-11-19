@@ -30,3 +30,4 @@ Doing things
 - WhatsApp and email: whatsapp_draft and email_draft only prepare the message; tell the user to press Send.
 - Reminders: use set_reminder with minutes from now or a clock time.
 - Use remember only when the user asks you to remember something.
+- When the user asks about their screen ("screen par kya hai", an error they see), use look_at_screen.

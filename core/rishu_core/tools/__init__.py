@@ -11,7 +11,7 @@ import httpx
 
 from ..config import Settings, data_dir
 from ..permissions import Risk
-from . import apps, comms, memory, notes, reminders, system, weather, web
+from . import apps, comms, memory, notes, reminders, system, vision, weather, web
 from .registry import Tool, ToolRegistry, ToolResult
 
 __all__ = ["Tool", "ToolRegistry", "ToolResult", "build_registry"]
@@ -40,6 +40,7 @@ def build_registry(
     uri_opener: Callable[[str], bool] | None = None,
     whatsapp_installed: Callable[[], bool] | None = None,
     controls: system.SystemControls | None = None,
+    vision_ask: vision.VisionAsk | None = None,
 ) -> ToolRegistry:
     """Create the registry with every Phase 1 tool. Dependencies are injectable for tests."""
     registry = ToolRegistry()
@@ -355,6 +356,30 @@ def build_registry(
             ),
             risk=Risk.R0,
             handler=lambda place: weather.weather(place, http_transport),
+        )
+    )
+    registry.register(
+        Tool(
+            name="look_at_screen",
+            description=(
+                "Take a picture of the user's screen and answer a question about it "
+                "(explain what is shown, read an error, describe a diagram)."
+            ),
+            parameters=_obj(
+                {
+                    "question": {
+                        "type": "string",
+                        "description": "What the user wants to know about the screen",
+                    }
+                },
+                ["question"],
+            ),
+            risk=Risk.R1,
+            handler=lambda question: vision.look_at_screen(
+                question, controls.capture_jpeg, vision_ask
+            ),
+            untrusted_output=True,
+            preview_fn=lambda a: "Look at the screen",
         )
     )
     return registry

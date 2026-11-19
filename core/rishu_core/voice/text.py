@@ -12,7 +12,7 @@ _MARKS = re.compile(r"[*_#>|~]+")
 _BULLET = re.compile(r"^\s*(?:[-•]|\d+[.)])\s+", re.MULTILINE)
 _SPACES = re.compile(r"[ \t]+")
 # Emoji and pictographs are not read aloud.
-_EMOJI = re.compile("[\U0001F000-\U0001FAFF\U00002600-\U000027BF\U0000FE0F\U0000200D]+")
+_EMOJI = re.compile("[\U0001f000-\U0001faff\U00002600-\U000027bf\U0000fe0f\U0000200d]+")
 # Sentence ends: . ! ? and the Devanagari danda, followed by space or end.
 _SENTENCE_END = re.compile(r"(?<=[.!?।॥])\s+")
 
