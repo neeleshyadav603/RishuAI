@@ -149,17 +149,26 @@ class Recorder:
         """Throw the recording away."""
         self._cancel.set()
 
-    def record(self, on_level: Callable[[float], None] | None = None) -> Recording:
+    def record(
+        self,
+        on_level: Callable[[float], None] | None = None,
+        no_speech_seconds: float | None = None,
+    ) -> Recording:
         if not self._lock.acquire(blocking=False):
             raise MicError("Already listening.")
         self._finish.clear()
         self._cancel.clear()
+        limit = (
+            self.no_speech_blocks
+            if no_speech_seconds is None
+            else max(1, round(no_speech_seconds * 10))
+        )
         try:
-            return self._record(on_level)
+            return self._record(on_level, limit)
         finally:
             self._lock.release()
 
-    def _record(self, on_level: Callable[[float], None] | None) -> Recording:
+    def _record(self, on_level: Callable[[float], None] | None, no_speech_blocks: int) -> Recording:
         blocks: list[bytes] = []
         floor: float | None = None
         heard = False
@@ -190,7 +199,7 @@ class Recorder:
                     break
                 if heard and quiet >= self.silence_blocks:
                     break
-                if not heard and count >= self.no_speech_blocks:
+                if not heard and count >= no_speech_blocks:
                     break
                 if count >= self.max_blocks:
                     break

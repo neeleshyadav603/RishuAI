@@ -108,6 +108,7 @@ class CoreRuntime:
             "streaming": defaults.get("streaming") is not False,
             "speak_replies": defaults.get("speak_replies") is not False,
             "voice_gender": defaults.get("voice_gender") or "male",
+            "follow_up": defaults.get("follow_up") is True,
         }
 
     def update_settings(self, patch: dict[str, Any]) -> dict[str, Any]:

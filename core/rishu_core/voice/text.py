@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 
 _CODE_BLOCK = re.compile(r"```.*?```", re.DOTALL)
 _INLINE_CODE = re.compile(r"`([^`]*)`")
@@ -69,3 +70,42 @@ def is_devanagari(text: str) -> bool:
     deva = sum(1 for ch in text if "ऀ" <= ch <= "ॿ")
     latin = sum(1 for ch in text if ch.isascii() and ch.isalpha())
     return deva > 0 and deva >= latin
+
+
+_GOODBYES = {
+    "bas",
+    "bas karo",
+    "bas itna hi",
+    "bas itna",
+    "theek hai bas",
+    "ok bas",
+    "okay bas",
+    "thank you",
+    "thanks",
+    "thank you rishu",
+    "thanks rishu",
+    "dhanyavaad",
+    "dhanyawad",
+    "shukriya",
+    "bye",
+    "ok bye",
+    "bye rishu",
+    "band karo",
+    "chup",
+    "chup ho jao",
+    "बस",
+    "बस करो",
+    "बस इतना ही",
+    "धन्यवाद",
+    "शुक्रिया",
+    "थैंक यू",
+    "बाय",
+    "ठीक है बस",
+}
+
+
+def is_goodbye(text: str) -> bool:
+    """A short 'that's all' that ends conversation mode instead of starting a turn."""
+    # Keep letters, digits and combining marks (Devanagari vowel signs are marks).
+    cleaned = "".join(ch if unicodedata.category(ch)[0] in "LMN" else " " for ch in text.lower())
+    return " ".join(cleaned.split()) in _GOODBYES

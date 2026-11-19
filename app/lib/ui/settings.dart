@@ -90,6 +90,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ? tr(c, 'Natural Hindi/English awaaz (internet), warna Windows ki awaaz', 'Natural voices online, Windows voices offline')
                   : tr(c, 'Is device par awaaz available nahi hai', 'No voice output on this device')),
             ),
+            SwitchListTile(
+              key: const ValueKey('follow-up'),
+              contentPadding: EdgeInsets.zero,
+              value: s['follow_up'] == true,
+              onChanged: c.speakReplies ? (v) => _save({'follow_up': v}) : null,
+              title: Text(tr(c, 'Baat-cheet mode: jawab ke baad mic khud khule', 'Conversation mode: listen again after each spoken reply')),
+              subtitle: Text(tr(c, '"Bas" ya "Thank you" bolo to band. Shor wali jagah par off rakho.',
+                  'Say "bas" or "thank you" to end. Keep it off in noisy rooms.')),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [

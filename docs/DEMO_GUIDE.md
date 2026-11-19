@@ -31,6 +31,7 @@
 | 15 | Koi webpage ya code screen par kholo, phir: "Screen par kya hai, samjhao" | Rishu screen dekhkar samjhata hai |
 | 15b | Left mein **Kaam** (Activity) tab | Har kaam ka record: risk level, permission |
 | 16 | Settings: awaaz Ladka/Ladki badlo, "Sunao" | Awaaz turant badalti hai |
+| 16b | (Optional, shaant kamre mein) Settings → Awaaz → **Baat-cheet mode** ON. Mic dabao: "Quantum computing kya hai?" → jawab ke baad bina dabaye: "Ek example do" → "Thank you" | Mic khud khulta hai, lagataar baat-cheet; "Thank you" par Rishu band |
 | 17 | Settings → Suraksha: PIN set karo, phir bolo **"Rishu lock"** | Rishu turant lock; chat screen se hat jaati hai. PIN (ya Windows Hello / bolkar password) se unlock |
 
 ## Agar kuch gadbad ho

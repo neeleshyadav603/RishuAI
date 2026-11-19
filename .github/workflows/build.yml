@@ -200,7 +200,9 @@ jobs:
   release:
     name: Publish the GitHub Release
     if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
-    needs: [android, windows]
+    # The Windows installer is the deliverable for now; an Android build problem
+    # (e.g. a Gradle repository hiccup) must not hold the Windows release back.
+    needs: [windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write

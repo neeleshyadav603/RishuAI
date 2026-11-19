@@ -10,7 +10,7 @@ from ..agent import Agent, ApprovalRequest
 from ..permissions import Risk
 from ..security import is_panic_phrase
 from ..strings import t
-from ..voice import MicError, Speaker, SttError, to_wav
+from ..voice import MicError, Speaker, SttError, is_goodbye, to_wav
 from .runtime import PROTOCOL_VERSION, CoreRuntime
 
 Event = dict[str, Any]
@@ -87,6 +87,7 @@ class Session:
         self._proposals: dict[str, Event] = {}
         self._closed = False
         self._speech_pending = False
+        self._voice_turn = False  # the current exchange started by voice
         voice = runtime.voice
         self.speaker = Speaker(
             voice.synthesizer,
@@ -124,8 +125,20 @@ class Session:
         self._send({"v": PROTOCOL_VERSION, "type": "state_change", "state": state})
 
     def _speech_state(self, state: str) -> None:
-        if not self._closed:
-            self._state(state)
+        if self._closed:
+            return
+        self._state(state)
+        if state == "idle" and self._voice_turn and self._follow_up_wanted():
+            # Conversation mode: the spoken reply ended by itself, so listen again.
+            threading.Thread(target=self.listen, kwargs={"follow_up": True}, daemon=True).start()
+
+    def _follow_up_wanted(self) -> bool:
+        return (
+            self.runtime.public_settings().get("follow_up") is True
+            and not self.busy
+            and not self.runtime.lock.locked
+            and not self.recorder.active
+        )
 
     def _speech_error(self, message: str) -> None:
         if not self._closed:
@@ -165,8 +178,9 @@ class Session:
         """Reserve the turn slot. Call from the connection before starting the worker."""
         return self._turn.acquire(blocking=False)
 
-    def run_turn(self, text: str) -> None:
+    def run_turn(self, text: str, voice: bool = False) -> None:
         """Run one user turn. Blocking: call in a worker thread after try_begin_turn."""
+        self._voice_turn = voice
         try:
             self.approver.reset()
             self._proposals.clear()
@@ -181,6 +195,7 @@ class Session:
             self._turn.release()
 
     def stop(self) -> None:
+        self._voice_turn = False  # STOP also ends conversation mode
         self.recorder.cancel()
         self.stop_speaking()
         self.approver.cancel_all()
@@ -189,8 +204,13 @@ class Session:
 
     # ---- voice ---------------------------------------------------------
 
-    def listen(self) -> None:
-        """Push-to-talk: record, transcribe, then run the turn. Blocking (worker thread)."""
+    def listen(self, follow_up: bool = False) -> None:
+        """Push-to-talk: record, transcribe, then run the turn. Blocking (worker thread).
+
+        ``follow_up``: conversation mode re-opened the mic after a spoken reply;
+        silence then simply ends the conversation, without a notice.
+        """
+        self._voice_turn = False
         if self.runtime.lock.locked:
             self.unlock_by_voice()
             return
@@ -208,7 +228,9 @@ class Session:
             return
         self._state("listening")
         try:
-            recording = self.recorder.record(on_level=self._audio_level)
+            recording = self.recorder.record(
+                on_level=self._audio_level, no_speech_seconds=6.0 if follow_up else None
+            )
         except MicError as exc:
             self.error("voice_mic", str(exc))
             self._state("idle")
@@ -217,7 +239,8 @@ class Session:
             self._state("idle")
             return
         if not recording.heard_speech:
-            self._not_heard(recording)
+            if not follow_up or recording.silent:
+                self._not_heard(recording)
             self._state("idle")
             return
         self._state("thinking")
@@ -233,10 +256,29 @@ class Session:
             self._state("idle")
             return
         if not text.strip() or self._closed:
-            self._send(
-                {"v": PROTOCOL_VERSION, "type": "notice", "text": t("not_heard", self._language())}
-            )
+            if not follow_up:
+                self._send(
+                    {
+                        "v": PROTOCOL_VERSION,
+                        "type": "notice",
+                        "text": t("not_heard", self._language()),
+                    }
+                )
             self._state("idle")
+            return
+        if follow_up and is_goodbye(text):
+            self._send(
+                {
+                    "v": PROTOCOL_VERSION,
+                    "type": "transcript_final",
+                    "text": text,
+                    "language": language,
+                }
+            )
+            self.speaker.say(
+                t("goodbye", self._language()),
+                self.runtime.public_settings().get("voice_gender", "male"),
+            )
             return
         self._send(
             {"v": PROTOCOL_VERSION, "type": "transcript_final", "text": text, "language": language}
@@ -249,7 +291,7 @@ class Session:
         if not self.try_begin_turn():
             self.error("busy", "Rishu is still working on the previous message.")
             return
-        self.run_turn(text)
+        self.run_turn(text, voice=True)
 
     def _audio_level(self, level: float) -> None:
         self._send({"v": PROTOCOL_VERSION, "type": "audio_level", "level": round(level, 3)})

@@ -395,6 +395,7 @@ def test_settings_round_trip_and_validation(settings, registry, tmp_path):
         "voice_gender": "male",
         "streaming": True,
         "speak_replies": True,
+        "follow_up": False,
         "autonomy": "smart",
     }
     changed = client.put(

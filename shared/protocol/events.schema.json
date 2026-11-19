@@ -535,6 +535,9 @@
                 "male",
                 "female"
               ]
+            },
+            "follow_up": {
+              "type": "boolean"
             }
           },
           "required": [

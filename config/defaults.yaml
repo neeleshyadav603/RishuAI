@@ -17,6 +17,8 @@ history:
 streaming: true
 # Read replies aloud (when a voice is available).
 speak_replies: true
+# Conversation mode: after a spoken reply to a spoken request, listen again for a follow-up.
+follow_up: false
 
 server:
   # Seconds the user has to answer an approval card before it counts as "no".

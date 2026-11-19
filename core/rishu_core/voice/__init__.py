@@ -4,7 +4,7 @@ from .engine import VoiceEngine
 from .mic import MicError, Recorder, Recording, to_wav
 from .speaker import Speaker
 from .stt import GroqTranscriber, SttError
-from .text import clean_for_speech, is_devanagari, split_for_speech
+from .text import clean_for_speech, is_devanagari, is_goodbye, split_for_speech
 from .tts import Audio, ChainSynthesizer, TtsError
 
 __all__ = [
@@ -20,6 +20,7 @@ __all__ = [
     "VoiceEngine",
     "clean_for_speech",
     "is_devanagari",
+    "is_goodbye",
     "split_for_speech",
     "to_wav",
 ]

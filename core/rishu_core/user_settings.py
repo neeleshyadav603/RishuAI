@@ -54,6 +54,7 @@ _FIELDS: dict[str, Callable[[Any], Any]] = {
     "streaming": _flag,
     "speak_replies": _flag,
     "voice_gender": _choice(VOICE_GENDERS),
+    "follow_up": _flag,
 }
 
 

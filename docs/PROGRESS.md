@@ -125,6 +125,14 @@ Published **v0.1.0** (Windows installer). Added for the demo, ahead of their pha
       while locked the core refuses chat, actions, settings, keys and the
       activity log (HTTP 423), and due reminders are announced without details
 
+- [x] Conversation mode (`follow_up`, off by default, v0.4.0): after a spoken
+      reply to a spoken request the mic opens again for 6 s; silence ends it
+      quietly; "bas" / "thank you" / "dhanyavaad" end it with a short goodbye;
+      typed messages and STOP never re-open the mic
+- [x] Spoken hello on launch; clear error when Windows sends only silence
+      (microphone privacy switch or a muted mic); speech threshold for quiet
+      laptop mics lowered (v0.4.0)
+
 ## Phase 3 — Security (remaining)
 
 - [ ] R3 step-up with two factors (PIN + Windows Hello) in the approval card

@@ -315,7 +315,8 @@ def test_sapi_synthesizer_calls_powershell_without_a_window(tmp_path):
 
 def voice_runtime(settings, registry, tmp_path, blocks, stt_reply, script, synth=None, player=None):
     seen = []
-    transport = stt_transport([(200, {"text": stt_reply})], seen)
+    replies = stt_reply if isinstance(stt_reply, list) else [stt_reply]
+    transport = stt_transport([(200, {"text": reply}) for reply in replies], seen)
     runtime = CoreRuntime(
         settings,
         token=TOKEN,
@@ -485,3 +486,60 @@ def test_emoji_are_not_spoken():
         clean_for_speech("Badhiya! 🎉🚀 Chalo shuru karte hain ✅")
         == "Badhiya! Chalo shuru karte hain."
     )
+
+
+def test_conversation_mode_listens_again_and_ends_on_goodbye(settings, registry, spawned, tmp_path):
+    synth, player = FakeSynth(), FakePlayer()
+    runtime, seen = voice_runtime(
+        settings,
+        registry,
+        tmp_path,
+        silence(3) + tone(6000, 6) + silence(15),
+        ["क्रोम खोलो", "धन्यवाद!"],
+        [[{"name": "open_app", "arguments": {"name": "chrome"}}], "Chrome khol diya!"],
+        synth,
+        player,
+    )
+    runtime.update_settings({"follow_up": True})
+    client = TestClient(create_app(runtime))
+    with client.websocket_connect("/ws", headers=AUTH) as ws:
+        read_until(ws, "hello")
+        ws.send_text(json.dumps({"v": 1, "type": "listen_start"}))
+        events = read_until(ws, "assistant_message")
+        events += read_until(ws, "transcript_final")  # the follow-up, without pressing the mic
+        states = []
+        while states[-2:] != ["speaking", "idle"]:  # the goodbye is spoken
+            events += read_until(ws, "state_change")
+            states.append(events[-1]["state"])
+        runtime.active_session.speaker.wait(2)
+    finals = [e["text"] for e in events if e["type"] == "transcript_final"]
+    assert finals == ["क्रोम खोलो", "धन्यवाद!"]
+    assert [t for t, _ in synth.texts] == [
+        "Chrome khol diya!",
+        "Theek hai! Jab zaroorat ho, bula lena.",
+    ]
+    assert len(seen) == 2 and spawned == [("exe", "chrome")]  # the goodbye started no new turn
+
+
+def test_typed_messages_never_open_the_mic(settings, registry, tmp_path):
+    runtime, seen = voice_runtime(settings, registry, tmp_path, tone(6000, 50), "x", ["Namaste!"])
+    runtime.update_settings({"follow_up": True})
+    client = TestClient(create_app(runtime))
+    with client.websocket_connect("/ws", headers=AUTH) as ws:
+        read_until(ws, "hello")
+        ws.send_text(json.dumps({"v": 1, "type": "user_message", "text": "Namaste"}))
+        events = read_until(ws, "assistant_message")
+        while not (events[-1]["type"] == "state_change" and events[-1]["state"] == "idle"):
+            events += read_until(ws, "state_change")
+        session = runtime.active_session
+        session.speaker.wait(2)
+        time.sleep(0.1)
+        assert not session.recorder.active
+    assert seen == [] and "listening" not in [e.get("state") for e in events]
+
+
+def test_goodbye_phrases():
+    from rishu_core.voice import is_goodbye
+
+    assert is_goodbye("Thank you, Rishu!") and is_goodbye("बस करो") and is_goodbye("ok bye")
+    assert not is_goodbye("thank you for the notes, ab email bhejo")
