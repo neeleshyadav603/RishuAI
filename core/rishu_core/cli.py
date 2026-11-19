@@ -78,12 +78,23 @@ def _selftest_server(settings: Any) -> None:
 
     token = secrets.token_urlsafe(32)
     with tempfile.TemporaryDirectory() as home:
+        from .voice import VoiceEngine
+        from .voice.player import NullPlayer
+
         runtime = CoreRuntime(
             settings,
             token=token,
             home=Path(home),
             secrets=MemoryStore(),
             llm=ScriptedLLM([[{"name": "get_time", "arguments": {}}], "Selftest reply."]),
+            voice=VoiceEngine(
+                settings.defaults.get("voice", {}),
+                settings.models.get("speech", {}),
+                settings.models.get("providers", {}),
+                lambda name: "",
+                home=Path(home),
+                player=NullPlayer(),
+            ),
         )
         sock = bind_socket(0)
         server = build_server(runtime)

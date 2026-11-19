@@ -5,6 +5,8 @@ import pytest
 from rishu_core.config import load_settings
 from rishu_core.tools import build_registry
 from rishu_core.tools.apps import AppLauncher
+from rishu_core.voice import engine as voice_engine
+from rishu_core.voice.player import NullPlayer
 
 
 class Spawned(list):
@@ -58,3 +60,9 @@ def registry(settings, spawned, opened_urls, tmp_path):
         home=tmp_path,
         now=lambda: datetime(2026, 11, 16, 9, 30),
     )
+
+
+@pytest.fixture(autouse=True)
+def silent_voice(monkeypatch):
+    """Tests never speak through the real sound card (Windows CI has one)."""
+    monkeypatch.setattr(voice_engine, "default_player", NullPlayer)
