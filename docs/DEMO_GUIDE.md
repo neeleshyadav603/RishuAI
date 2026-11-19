@@ -2,7 +2,7 @@
 
 ## Demo se pehle (15 minute)
 
-1. GitHub Releases se `RishuSetup-0.1.0.exe` download karke install karo.
+1. GitHub Releases se `RishuSetup-0.2.0.exe` (ya jo latest ho) download karke install karo.
    "Unknown publisher" aaye to **More info → Run anyway**.
 2. Rishu kholo, setup poora karo: naam, bhasha, awaaz, aur **Groq API key**
    (console.groq.com/keys → Create API Key → paste → Check + Save).
@@ -23,8 +23,13 @@
 | 7 | Bolte waqt beech mein **STOP** (ya Esc) | Rishu turant chup ho jata hai |
 | 8 | "Note likho: kal 10 baje HOD ke saath meeting" → "Mere notes dikhao" | Note save aur list |
 | 9 | Kisi aur app mein rehte hue **Ctrl+Shift+Space** dabao aur bolo | Rishu kahin se bhi sunta hai |
-| 10 | Left mein **Kaam** (Activity) tab | Har kaam ka record: risk level, permission |
-| 11 | Settings: awaaz Ladka/Ladki badlo, "Sunao" | Awaaz turant badalti hai |
+| 10 | "Gurugram ka mausam batao" | Aaj aur kal ka mausam, bolkar |
+| 11 | "1 minute baad mujhe paani peene ka reminder lagao" | 1 minute baad Rishu khud bolkar yaad dilata hai |
+| 12 | "Yaad rakho: mera favourite subject DAA hai" → "Nayi baat-cheet" → "Mera favourite subject kya hai?" | Nayi chat mein bhi yaad rehta hai |
+| 13 | "WhatsApp pe likho: main 10 minute late hoon" | Permission card → "Haan" → WhatsApp khulta hai, message type hua; Send aap dabao |
+| 14 | "Awaaz thodi badhao" | Volume badhta hai |
+| 15 | Left mein **Kaam** (Activity) tab | Har kaam ka record: risk level, permission |
+| 16 | Settings: awaaz Ladka/Ladki badlo, "Sunao" | Awaaz turant badalti hai |
 
 ## Agar kuch gadbad ho
 
