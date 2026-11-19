@@ -1,0 +1,48 @@
+name: LLM end-to-end
+
+# Runs the real router, streaming client, tools and WebSocket server against a
+# real model server (a small local model in Ollama), with no API keys.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "core/**"
+      - "config/**"
+      - "shared/**"
+      - "scripts/llm_e2e.py"
+      - ".github/workflows/llm-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: llm-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ollama:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: core/pyproject.toml
+      - name: Install the core
+        run: python -m pip install -e "core[web]"
+      - name: Install Ollama and a small model
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          (ollama serve > /tmp/ollama.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:11434/api/tags && break; sleep 1; done
+          ollama pull qwen2.5:1.5b
+      - name: Run a real turn through the core
+        run: python scripts/llm_e2e.py | tee e2e.txt
+      - name: Summary
+        if: always()
+        run: |
+          { echo '### LLM end-to-end'; echo '```'; cat e2e.txt 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
