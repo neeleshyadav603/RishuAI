@@ -2,6 +2,7 @@ import json
 import math
 import struct
 import subprocess
+import sys
 import threading
 import time
 from array import array
@@ -423,3 +424,33 @@ def test_speak_event_replays_text_and_muted_replies_are_not_spoken(settings, reg
         read_until(ws, "state_change")
         read_until(ws, "state_change")
     assert synth.texts == [("Phir se suno.", "female")]
+
+
+def test_global_shortcut_toggles_listening_for_the_open_window(
+    settings, registry, spawned, tmp_path
+):
+    runtime, _ = voice_runtime(
+        settings,
+        registry,
+        tmp_path,
+        silence(3) + tone(6000, 6) + silence(15),
+        "notepad kholo",
+        [[{"name": "open_app", "arguments": {"name": "notepad"}}], "Notepad khul gaya."],
+    )
+    runtime.hotkey_pressed()  # no window connected: nothing happens
+    client = TestClient(create_app(runtime))
+    with client.websocket_connect("/ws", headers=AUTH) as ws:
+        read_until(ws, "hello")
+        assert runtime.active_session is not None
+        runtime.hotkey_pressed()
+        events = read_until(ws, "assistant_message")
+    assert any(e["type"] == "transcript_final" for e in events)
+    assert spawned == [("exe", "notepad")]
+    assert runtime.active_session is None  # the window closed
+
+
+def test_start_hotkey_is_windows_only():
+    from rishu_core.voice.hotkey import start_hotkey
+
+    if sys.platform != "win32":
+        assert start_hotkey(lambda: None) is False

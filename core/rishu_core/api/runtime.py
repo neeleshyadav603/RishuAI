@@ -63,6 +63,8 @@ class CoreRuntime:
         self._lock = threading.Lock()
         self._router: LLMRouter | None = None
         self._router_generation = -1
+        self.active_session: Any = None
+        self.hotkey_enabled = False
         self.voice = voice or VoiceEngine(
             settings.defaults.get("voice", {}),
             settings.models.get("speech", {}),
@@ -238,6 +240,25 @@ class CoreRuntime:
             home=self.home,
             streaming=bool(settings.defaults.get("streaming", True)),
         )
+
+    # ---- the global shortcut ------------------------------------------------
+
+    def attach(self, session: Any) -> None:
+        self.active_session = session
+
+    def detach(self, session: Any) -> None:
+        if getattr(self, "active_session", None) is session:
+            self.active_session = None
+
+    def hotkey_pressed(self) -> None:
+        """Ctrl+Shift+Space anywhere in Windows: talk to Rishu."""
+        session = getattr(self, "active_session", None)
+        if session is None:
+            return
+        from ..voice.hotkey import bring_app_to_front
+
+        bring_app_to_front()
+        session.toggle_listening()
 
     def hello(self) -> dict[str, Any]:
         """First event on every connection: what this core is and how it is set up."""

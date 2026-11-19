@@ -95,6 +95,7 @@ class Session:
             on_error=self._speech_error,
         )
         self.recorder = voice.new_recorder()
+        runtime.attach(self)
 
     # ---- helpers -------------------------------------------------------
 
@@ -248,6 +249,13 @@ class Session:
     def listen_stop(self) -> None:
         self.recorder.finish()
 
+    def toggle_listening(self) -> None:
+        """Global shortcut: stop listening if listening, else start in the background."""
+        if self.recorder.active:
+            self.listen_stop()
+        elif not self.busy:
+            threading.Thread(target=self.listen, name="rishu-listen", daemon=True).start()
+
     def speak(self, text: str) -> None:
         if not self.speaker.say(text, self.runtime.public_settings().get("voice_gender", "male")):
             self.error("voice_output", t("voice_output_failed", self._language()) + ".")
@@ -283,4 +291,5 @@ class Session:
 
     def close(self) -> None:
         self._closed = True
+        self.runtime.detach(self)
         self.stop()

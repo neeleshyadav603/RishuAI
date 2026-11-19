@@ -127,6 +127,9 @@ def serve(
         print("RISHU_TOKEN is too short.", file=sys.stderr)
         return 2
     runtime = CoreRuntime(settings or load_settings(), token=token)
+    from ..voice.hotkey import start_hotkey
+
+    runtime.hotkey_enabled = start_hotkey(runtime.hotkey_pressed)
     sock = bind_socket(port)
     server = build_server(runtime)
 
