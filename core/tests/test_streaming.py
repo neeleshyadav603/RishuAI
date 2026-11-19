@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from rishu_core.agent import Agent, build_system_prompt
-from rishu_core.llm import LLMRouter, ProviderUnavailable, TokenStream
+from rishu_core.llm import LLMRouter, ModelFailed, ProviderUnavailable, TokenStream
 from rishu_core.llm.mock import ScriptedLLM
 from rishu_core.llm.openai_compat import OpenAICompatClient
 from rishu_core.permissions import PermissionEngine
@@ -99,7 +99,7 @@ def test_stream_error_event_midway_raises():
         transport=httpx.MockTransport(lambda request: httpx.Response(200, content=body)),
     )
     stream, tokens, _ = collect()
-    with pytest.raises(ProviderUnavailable):
+    with pytest.raises(ModelFailed):
         client.chat("m-1", [], stream=stream)
     assert tokens == ["Half "]
 
@@ -137,7 +137,7 @@ def test_router_discards_partial_text_before_falling_back():
     assert response.content == "Sahi jawab" and response.provider == "b"
     assert tokens == ["Broken ", "Sahi ", "jawab"]
     assert resets == [1]  # the reset came after the broken piece, before the good ones
-    assert "Using b because" in response.note
+    assert response.note.startswith("Using b")
 
 
 def make_agent(settings, registry, script, **kwargs):

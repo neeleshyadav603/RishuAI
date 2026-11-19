@@ -11,6 +11,7 @@ from .base import (
     AuthError,
     LLMError,
     LLMResponse,
+    ModelFailed,
     ModelNotFound,
     ProviderUnavailable,
     QuotaError,
@@ -18,6 +19,12 @@ from .base import (
     ToolCall,
 )
 
+_MODEL_FAILED_HINTS = (
+    "tool_use_failed",
+    "failed_generation",
+    "output_parse_failed",
+    "tool call validation",
+)
 _MODEL_GONE_HINTS = ("not found", "does not exist", "decommission", "deprecated", "unknown model")
 
 
@@ -123,7 +130,7 @@ class OpenAICompatClient:
                     if not isinstance(chunk, dict):
                         continue
                     if chunk.get("error"):
-                        raise ProviderUnavailable(f"{self.name}: the stream reported an error")
+                        raise ModelFailed(f"{self.name}: the model stopped with an error")
                     used_model = chunk.get("model") or used_model
                     choices = chunk.get("choices") or []
                     delta = (choices[0].get("delta") or {}) if choices else {}
@@ -189,6 +196,9 @@ class OpenAICompatClient:
             status == 400 and "model" in text and any(h in text for h in _MODEL_GONE_HINTS)
         ):
             raise ModelNotFound(f"{self.name}: model not available ({status})")
+        if status == 413 or (status == 400 and any(h in text for h in _MODEL_FAILED_HINTS)):
+            # Groq: a malformed tool call, or more tokens than this model's free limit.
+            raise ModelFailed(f"{self.name}: this model could not handle the request ({status})")
         if status >= 500:
             raise ProviderUnavailable(f"{self.name}: server error ({status})")
         raise LLMError(f"{self.name}: request rejected ({status})")

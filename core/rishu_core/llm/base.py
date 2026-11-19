@@ -24,6 +24,10 @@ class ModelNotFound(LLMError):
     """The model ID no longer exists at this provider."""
 
 
+class ModelFailed(LLMError):
+    """This model failed this request (bad tool call, too large); another model may work."""
+
+
 class ProviderUnavailable(LLMError):
     """Network failure, timeout or 5xx."""
 

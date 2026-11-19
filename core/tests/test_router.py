@@ -165,3 +165,48 @@ def test_tool_calls_are_parsed_and_bad_json_is_flagged(fake):
     assert good.arguments == {"name": "chrome"} and good.parse_error is None
     assert bad.arguments == {} and bad.parse_error
     assert response.to_message()["tool_calls"][0]["function"]["name"] == "open_app"
+
+
+def test_quota_on_one_model_moves_to_the_next_model_of_the_same_provider():
+    seen = []
+
+    def handler(request):
+        if request.url.path.endswith("/models"):
+            return httpx.Response(200, json={"data": [{"id": "g-old"}, {"id": "g-smart"}]})
+        model = json.loads(request.content)["model"]
+        seen.append(model)
+        if model == "g-old":
+            return httpx.Response(429, json={"error": {"message": "rate limit"}})
+        return reply(model, "ok")
+
+    router = LLMRouter.from_settings(
+        MODELS_CFG, env={"GROQ_API_KEY": "k"}, transport=httpx.MockTransport(handler)
+    )
+    response = router.chat("smart", [{"role": "user", "content": "hi"}])
+    assert response.provider == "groq" and seen == ["g-old", "g-smart"]
+    assert "429" in response.note
+    assert router.providers[0].cooldown_until == 0  # one model is limited, not the provider
+
+
+def test_bad_tool_call_or_too_large_tries_the_next_model():
+    seen = []
+
+    def handler(request):
+        if request.url.path.endswith("/models"):
+            return httpx.Response(200, json={"data": [{"id": "g-old"}, {"id": "g-smart"}]})
+        model = json.loads(request.content)["model"]
+        seen.append(model)
+        if model == "g-old":
+            return httpx.Response(
+                400,
+                json={"error": {"code": "tool_use_failed", "message": "Failed to call a function"}},
+            )
+        return httpx.Response(413, json={"error": {"message": "Request too large for model (TPM)"}})
+
+    router = LLMRouter.from_settings(
+        MODELS_CFG, env={"GROQ_API_KEY": "k"}, transport=httpx.MockTransport(handler)
+    )
+    with pytest.raises(AllProvidersFailed) as error:
+        router.chat("smart", [{"role": "user", "content": "hi"}])
+    assert seen[:2] == ["g-old", "g-smart"]  # both groq models were tried
+    assert all("could not handle" in r for r in error.value.reasons if r.startswith("groq"))

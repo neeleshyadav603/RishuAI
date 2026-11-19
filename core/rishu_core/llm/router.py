@@ -14,6 +14,7 @@ from .base import (
     AllProvidersFailed,
     LLMError,
     LLMResponse,
+    ModelFailed,
     ModelNotFound,
     QuotaError,
     TokenStream,
@@ -139,6 +140,7 @@ class LLMRouter:
             if not models:
                 reasons.append(f"{state.name}: no model configured for '{role}'")
                 continue
+            quota_hits = 0
             for model in models:
                 try:
                     response = state.client.chat(model, messages, tools, stream=stream)
@@ -147,15 +149,20 @@ class LLMRouter:
                     # it before the next model or provider starts again.
                     if stream is not None:
                         stream.reset()
-                    if isinstance(exc, ModelNotFound):
+                    if isinstance(exc, ModelNotFound | ModelFailed):
                         reasons.append(str(exc) + f" [{model}]")
                         continue
                     if isinstance(exc, QuotaError):
-                        self._cool(state, str(exc))
+                        # Free tiers limit each model separately: try the next one.
+                        quota_hits += 1
+                        reasons.append(str(exc) + f" [{model}]")
+                        continue
                     reasons.append(str(exc))
                     break
                 response.provider = state.name
                 if reasons:
-                    response.note = f"Using {state.name} because: " + "; ".join(reasons)
+                    response.note = f"Using {state.name}/{model} because: " + "; ".join(reasons)
                 return response
+            if quota_hits and quota_hits == len(models):
+                self._cool(state, f"{state.name}: rate limit or quota reached (429)")
         raise AllProvidersFailed(reasons)
