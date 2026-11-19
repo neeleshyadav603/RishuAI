@@ -41,6 +41,14 @@ Rishu is a voice-first personal AI assistant for Windows and Android.
   (`gh api` works through the proxy even though `gh auth status` complains).
 - The repo is public: never commit secrets, API keys, keystores, or the
   owner's personal data. Commit as the pre-configured git identity.
+- Releases: pushing tags and writing refs through the GitHub API are blocked
+  from the cloud workspace. To publish a release, raise the version in the
+  `VERSION` file and push to `main`: the `release` job in `build.yml` creates
+  tag `vX.Y.Z` and the GitHub Release when that version does not exist yet.
+  Optional notes: `docs/release-notes/vX.Y.Z.md`.
+- Every Windows build installs the installer on the runner and runs one real
+  turn through the installed app (`RISHU_SMOKE_FILE`); keep it green.
+- `llm-e2e.yml` runs a real turn against a small Ollama model (no keys needed).
 - End commit messages with the attribution lines the session provides.
 
 ## Non-negotiables (spec §3)

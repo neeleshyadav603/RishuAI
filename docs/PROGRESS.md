@@ -102,6 +102,21 @@ Voice (core side, `core/rishu_core/voice/`):
 - [x] Global hotkey Ctrl+Shift+Space (Windows RegisterHotKey in the core) toggles
       listening and brings the window to the front
 
+## Showcase sprint (2026-11-19 night) — beyond the phase order
+
+Published **v0.1.0** (Windows installer). Added for the demo, ahead of their phases:
+- [x] Tools: play_youtube, browser_search, whatsapp_draft (official click-to-chat,
+      user presses Send, R2), email_draft (mailto, R2)
+- [x] Tools: volume (media keys), screenshot (PowerShell), lock_computer (R2),
+      battery_status
+- [x] Reminders/timers (`set_reminder`, `list_reminders`, `cancel_reminder`),
+      delivered as a `reminder` event and spoken aloud (part of Phase 5)
+- [x] Memory of facts the user asks to remember (`remember`, `forget`,
+      `list_memories`), injected into the system prompt with the current time
+      (simple Phase 4 memory; not encrypted yet — move to the encrypted store in Phase 3/4)
+- [x] Weather from Open-Meteo (free; non-commercial terms: check before a paid product)
+- [x] CI: installed-app smoke test on Windows; real-model end-to-end with Ollama
+
 ## Phases 3–10
 
 See spec §14. Break each phase into checklist items here when it starts.
@@ -119,6 +134,13 @@ See spec §14. Break each phase into checklist items here when it starts.
 
 ## Known issues
 
+- Offline (no internet) Hindi speech needs the Windows Hindi speech pack; without
+  it, Devanagari text is not spoken by the offline voice (natural voices online work).
+- PyInstaller-built executables are sometimes flagged by antivirus heuristics;
+  code signing (paid) and building the bootloader from source would reduce it.
+- edge-tts relies on Microsoft's Edge read-aloud service (not an official API):
+  it can be switched off in `config/defaults.yaml` (`voice.edge_tts`).
+
 - R3 actions are always refused for now: step-up authentication (two factors)
   arrives with the security module in Phase 3. The app is told through
   `capabilities.step_up = false` and the user gets a clear message.
@@ -129,6 +151,9 @@ See spec §14. Break each phase into checklist items here when it starts.
   the size gate, not opened here.
 
 ## Additions beyond the spec
+
+- Showcase sprint additions listed above (browser shortcuts, drafts, system
+  controls, reminders, memory, weather, global hotkey, voice preview).
 
 - Offline intent fallback in the core (Phase 1): basic Hinglish/Hindi/English
   commands still work when no LLM provider is reachable.
