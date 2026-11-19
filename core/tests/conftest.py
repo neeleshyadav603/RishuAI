@@ -59,6 +59,8 @@ def registry(settings, spawned, opened_urls, tmp_path):
         resolver=lambda host: ["93.184.216.34"],
         home=tmp_path,
         now=lambda: datetime(2026, 11, 16, 9, 30),
+        uri_opener=lambda uri: opened_urls.append(uri) or True,
+        whatsapp_installed=lambda: True,
     )
 
 

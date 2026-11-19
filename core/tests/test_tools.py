@@ -174,14 +174,65 @@ def test_argument_cleaning(registry):
 def test_every_tool_has_a_valid_schema(registry):
     assert registry.names() == [
         "add_note",
+        "browser_search",
+        "email_draft",
         "get_time",
         "list_notes",
         "open_app",
         "open_url",
+        "play_youtube",
         "read_page",
         "web_search",
+        "whatsapp_draft",
     ]
     for schema in registry.schemas():
         function = schema["function"]
         assert schema["type"] == "function" and function["description"]
         assert function["parameters"]["type"] == "object"
+
+
+def test_youtube_and_browser_search_open_results(registry, opened_urls):
+    assert run(registry, "play_youtube", query="Kesariya song").ok
+    assert run(registry, "browser_search", query="GITM Gurugram admission").ok
+    assert opened_urls == [
+        "https://www.youtube.com/results?search_query=Kesariya+song",
+        "https://www.google.com/search?q=GITM+Gurugram+admission",
+    ]
+    assert not run(registry, "play_youtube", query="  ").ok
+
+
+def test_whatsapp_draft_uses_the_official_link_and_never_sends(registry, opened_urls):
+    tool = registry.get("whatsapp_draft")
+    assert tool.risk.label == "R2"  # always previewed and approved first
+    result = tool.handler(text="Main 10 minute late hoon", phone="98765 43210")
+    assert result.ok and "NOT sent" in result.content
+    assert (
+        opened_urls[-1]
+        == "whatsapp://send?text=Main%2010%20minute%20late%20hoon&phone=919876543210"
+    )
+    assert tool.handler(text="hi").ok and opened_urls[-1] == "whatsapp://send?text=hi"
+    assert not tool.handler(text="hi", phone="call me").ok
+    assert not tool.handler(text="   ").ok
+
+
+def test_whatsapp_web_link_when_the_app_is_missing():
+    from rishu_core.tools import comms
+
+    opened = []
+    result = comms.whatsapp_draft(
+        "नमस्ते", "+91 98765-43210", lambda u: opened.append(u) or True, lambda: False
+    )
+    assert result.ok and opened == [
+        "https://wa.me/919876543210?text=%E0%A4%A8%E0%A4%AE%E0%A4%B8%E0%A5%8D%E0%A4%A4%E0%A5%87"
+    ]
+    assert comms.clean_phone("09876543210") == "919876543210"
+    assert comms.clean_phone("") == ""
+    assert comms.clean_phone("12") is None
+
+
+def test_email_draft(registry, opened_urls):
+    assert run(
+        registry, "email_draft", to="hod@gitm.edu.in", subject="Leave", body="Kal chhutti chahiye."
+    ).ok
+    assert opened_urls[-1] == "mailto:hod@gitm.edu.in?subject=Leave&body=Kal%20chhutti%20chahiye."
+    assert not run(registry, "email_draft", to="not an email", subject="a", body="b").ok

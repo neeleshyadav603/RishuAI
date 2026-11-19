@@ -11,7 +11,7 @@ import httpx
 
 from ..config import Settings, data_dir
 from ..permissions import Risk
-from . import apps, notes, web
+from . import apps, comms, notes, web
 from .registry import Tool, ToolRegistry, ToolResult
 
 __all__ = ["Tool", "ToolRegistry", "ToolResult", "build_registry"]
@@ -37,12 +37,17 @@ def build_registry(
     resolver: web.Resolver | None = None,
     home: Path | None = None,
     now: Callable[[], datetime] = datetime.now,
+    uri_opener: Callable[[str], bool] | None = None,
+    whatsapp_installed: Callable[[], bool] | None = None,
 ) -> ToolRegistry:
     """Create the registry with every Phase 1 tool. Dependencies are injectable for tests."""
     registry = ToolRegistry()
     web_cfg = settings.defaults.get("web", {})
     launcher = launcher or apps.AppLauncher(settings.app_aliases)
     store = notes.NotesStore((home or data_dir()) / "notes.jsonl")
+    browse = url_opener or (lambda url: bool(apps.webbrowser.open(url)))
+    open_uri = uri_opener or comms.default_uri_opener
+    wa_installed = whatsapp_installed or comms.whatsapp_app_installed
 
     registry.register(
         Tool(
@@ -138,6 +143,78 @@ def build_registry(
             ),
             risk=Risk.R0,
             handler=lambda limit=10: notes.list_notes(store, limit),
+        )
+    )
+    registry.register(
+        Tool(
+            name="play_youtube",
+            description="Open YouTube search results for a song, video or topic in the browser.",
+            parameters=_obj(
+                {"query": {"type": "string", "description": "What to search on YouTube"}}, ["query"]
+            ),
+            risk=Risk.R1,
+            handler=lambda query: comms.youtube(query, browse),
+            preview_fn=lambda a: f"Open YouTube results for '{a.get('query', '')}'",
+        )
+    )
+    registry.register(
+        Tool(
+            name="browser_search",
+            description=(
+                "Open Google search results in the user's browser so they can see them. "
+                "Use web_search instead when you need to read and answer yourself."
+            ),
+            parameters=_obj(
+                {"query": {"type": "string", "description": "Search words"}}, ["query"]
+            ),
+            risk=Risk.R1,
+            handler=lambda query: comms.browser_search(query, browse),
+            preview_fn=lambda a: f"Search Google for '{a.get('query', '')}' in the browser",
+        )
+    )
+    registry.register(
+        Tool(
+            name="whatsapp_draft",
+            description=(
+                "Open WhatsApp with a message typed in, ready to send. Without a phone "
+                "number the user picks the contact. The user presses Send; this tool never sends."
+            ),
+            parameters=_obj(
+                {
+                    "text": {"type": "string", "description": "The message"},
+                    "phone": {
+                        "type": "string",
+                        "description": "Phone number with country code, only if the user gave one; else empty",
+                    },
+                },
+                ["text"],
+            ),
+            risk=Risk.R2,
+            handler=lambda text, phone="": comms.whatsapp_draft(
+                text, phone, open_uri, wa_installed
+            ),
+            preview_fn=lambda a: (
+                f"Open WhatsApp{' for ' + a['phone'] if a.get('phone') else ''} with the message: {a.get('text', '')}"
+            ),
+        )
+    )
+    registry.register(
+        Tool(
+            name="email_draft",
+            description="Open an email draft in the user's mail app (the user reviews and sends it).",
+            parameters=_obj(
+                {
+                    "to": {"type": "string", "description": "Recipient email address, or empty"},
+                    "subject": {"type": "string", "description": "Subject line"},
+                    "body": {"type": "string", "description": "Email text"},
+                },
+                ["subject", "body"],
+            ),
+            risk=Risk.R2,
+            handler=lambda subject, body, to="": comms.email_draft(to, subject, body, open_uri),
+            preview_fn=lambda a: (
+                f"Open an email draft to {a.get('to') or '(choose)'}: {a.get('subject', '')}"
+            ),
         )
     )
     return registry
