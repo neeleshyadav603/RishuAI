@@ -2,7 +2,7 @@
 
 ## Demo se pehle (15 minute)
 
-1. GitHub Releases se `RishuSetup-0.2.0.exe` (ya jo latest ho) download karke install karo.
+1. GitHub Releases se `RishuSetup-0.4.0.exe` (ya jo latest ho) download karke install karo.
    "Unknown publisher" aaye to **More info → Run anyway**.
 2. Rishu kholo, setup poora karo: naam, bhasha, awaaz, aur **Groq API key**
    (console.groq.com/keys → Create API Key → paste → Check + Save).
@@ -14,7 +14,7 @@
 
 | # | Aap kya karo / bolo | Kya dikhega |
 |---|---|---|
-| 1 | App kholo | Animated orb, Rishu taiyaar |
+| 1 | App kholo | Animated orb; Rishu khud bolkar namaste karta hai ("Suprabhat Neelesh! Main Rishu hoon…") |
 | 2 | Mic dabao: "Namaste Rishu, apna introduction do" | Orb sunte waqt awaaz ke saath hilta hai, phir Rishu bolkar jawab deta hai |
 | 3 | "Chrome kholo" | Chrome khulta hai, chat mein ✓ step dikhta hai |
 | 4 | "gitm.edu.in kholo" | Website browser mein khulti hai |
@@ -40,6 +40,10 @@
 - **Awaaz nahi aa rahi:** top bar ka speaker icon on hai? Internet on hai?
 - **"Rishu start nahi ho paaya":** "Dobara try karo" dabao; antivirus ne core ko
   roka ho to Rishu ko allow karo.
+- **Mic ki awaaz bilkul nahi pahunch rahi:** Rishu khud bata dega ("Mic se bilkul bhi awaaz nahi aa rahi…");
+  Windows Settings → Privacy & security → Microphone → dono switch ON, aur laptop ka mic-mute key check karo.
+- **PIN bhool gaye:** Rishu band karo, `%LOCALAPPDATA%\Rishu\lock.json` file delete karo, Rishu dobara kholo
+  (lock hat jaayega; Windows account ka access hi asli suraksha hai).
 - **Backup:** typing hamesha kaam karti hai; suggestions par click karke bhi demo ho sakta hai.
 
 ## Kya bolna hai (pitch)

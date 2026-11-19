@@ -170,6 +170,7 @@ class AssistantController extends ChangeNotifier {
   double approvalTimeout = 120;
   bool disconnected = false;
   bool _skippedSetup = false;
+  bool _greeted = false;
   AssistantItem? _streaming;
 
   // ---- derived ----------------------------------------------------------
@@ -292,6 +293,19 @@ class AssistantController extends ChangeNotifier {
     mood = OrbMood.idle;
     final firstRun = !hasBrain && userName.isEmpty && !_skippedSetup;
     phase = firstRun ? Phase.onboarding : Phase.ready;
+    if (phase == Phase.ready && !lock.locked) _greet();
+  }
+
+  /// Rishu says hello aloud once per launch (only when replies are spoken).
+  void _greet() {
+    if (_greeted || !speakReplies || !voice.output) return;
+    _greeted = true;
+    final hour = DateTime.now().hour;
+    final name = userName.isEmpty ? '' : ' $userName';
+    final text = english
+        ? '${hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'}$name! I am Rishu. How can I help?'
+        : '${hour < 12 ? 'सुप्रभात' : hour < 17 ? 'नमस्ते' : 'शुभ संध्या'}$name! मैं रिशु हूँ। बताइए, क्या करना है?';
+    _core?.send({'type': 'speak', 'text': text});
   }
 
   void _lockState(Map<String, dynamic> e) {
@@ -304,6 +318,7 @@ class AssistantController extends ChangeNotifier {
       lockError = '';
     }
     if (!lock.locked) lockError = '';
+    if (wasLocked && !lock.locked && phase == Phase.ready) _greet();
   }
 
   void _token(Map<String, dynamic> e) {

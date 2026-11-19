@@ -68,6 +68,8 @@ void main() {
   test('a turn streams into one bubble with steps, sources and approval', () async {
     final (c, core) = await started();
     expect(c.phase, Phase.ready);
+    expect(core.sent.single['type'], 'speak'); // the spoken hello, once per launch
+    expect('${core.sent.single['text']}', contains('Neelesh'));
     c.sendText('AI news search karo');
     expect(core.sent.last, {'type': 'user_message', 'text': 'AI news search karo'});
     for (final e in [
