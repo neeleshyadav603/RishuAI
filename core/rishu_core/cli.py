@@ -168,6 +168,16 @@ def voicetest() -> int:
         captured = SystemControls().capture_jpeg(shot)
         size = shot.stat().st_size if captured else 0
         print(f"screen capture for vision: {'ok' if captured else 'FAILED'} ({size} bytes)")
+        # Windows Hello: a runner has no fingerprint/face, so "unavailable:..."
+        # is the expected answer; a PowerShell or WinRT error is not.
+        from .security import WindowsHello
+
+        try:
+            hello = WindowsHello(Path(tmp))
+            code, answer = hello._call("check", timeout=60)
+            print(f"windows hello check: exit {code}, {answer or '(no output)'} {hello.last_error}")
+        except Exception as exc:  # noqa: BLE001 - report, do not fail the voice test
+            print(f"windows hello check: FAILED ({exc})")
     print("voicetest ok" if ok else "voicetest FAILED")
     return 0 if ok else 1
 

@@ -90,6 +90,7 @@ class WindowsHello:
         self.platform = platform
         self._run = run
         self._available: bool | None = None
+        self.last_error = ""
 
     def _call(self, mode: str, message: str = "Rishu", timeout: float = 120) -> tuple[int, str]:
         self.script_dir.mkdir(parents=True, exist_ok=True)
@@ -113,6 +114,7 @@ class WindowsHello:
             timeout=timeout,
             creationflags=CREATE_NO_WINDOW,
         )
+        self.last_error = (getattr(result, "stderr", "") or "").strip()[-400:]
         return result.returncode, (result.stdout or "").strip()
 
     def known(self) -> bool:
