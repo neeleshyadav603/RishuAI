@@ -466,7 +466,10 @@ class _Section extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       constraints: const BoxConstraints(maxWidth: 820),
       decoration: glass(radius: 18),
-      child: Column(
+      // List tiles paint on the nearest Material: give them one above the glass.
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -479,6 +482,7 @@ class _Section extends StatelessWidget {
           const SizedBox(height: 14),
           ...children,
         ],
+        ),
       ),
     );
   }

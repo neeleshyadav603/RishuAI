@@ -260,11 +260,17 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: SettingsScreen(controller: controller))));
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Professional'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('persona-personal')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('persona-personal')));
     await tester.pump(const Duration(milliseconds: 300));
     expect(core.bodies.whereType<Map<String, dynamic>>(), contains({'persona': 'personal', 'voice_gender': 'female'}));
     expect(core.sent.last['type'], 'speak');
+    await tester.ensureVisible(find.byKey(const ValueKey('about-me')));
+    await tester.pump();
     await tester.enterText(find.byKey(const ValueKey('about-me')), 'Main GITM mein padhata hoon.');
+    await tester.ensureVisible(find.byKey(const ValueKey('save-about-me')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('save-about-me')));
     await tester.pump(const Duration(milliseconds: 300));
     expect(core.bodies.last, {'about_me': 'Main GITM mein padhata hoon.'});
