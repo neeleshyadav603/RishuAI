@@ -5,6 +5,7 @@ import '../core/connection.dart';
 import '../state/assistant.dart';
 import 'chat.dart' show tr;
 import 'lock.dart' show SecuritySettings;
+import 'teach.dart' show TaughtSkills;
 import 'theme.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -256,6 +257,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: const TextStyle(color: RishuColors.muted, fontSize: 12.5),
             ),
           ],
+        ),
+        _Section(
+          icon: Icons.school_rounded,
+          title: tr(c, 'Seekhe hue kaam', 'Taught tasks'),
+          children: [TaughtSkills(controller: c)],
         ),
         _Section(
           icon: Icons.lock_rounded,

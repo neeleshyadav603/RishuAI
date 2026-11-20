@@ -126,6 +126,26 @@ void main() {
     expect(core.sent.last, {'type': 'approval_response', 'call_id': 'r2', 'approved': true, 'pin': '4826'});
   });
 
+  test('teach mode: banner state, done, cancel and forget', () async {
+    final (c, core) = await started();
+    expect(c.teach.recording, isFalse);
+    core.controller.add({'v': 1, 'type': 'teach_state', 'recording': true, 'task': 'assignment marks',
+        'steps': ['Type "Priya" into "Search students"'], 'skills': []});
+    await Future<void>.delayed(Duration.zero);
+    expect(c.teach.recording, isTrue);
+    expect(c.teach.steps.single, contains('Priya'));
+    c.teachDone();
+    expect(core.sent.last['type'], 'user_message');
+    c.teachCancel();
+    expect(core.sent.last, {'type': 'teach_cancel'});
+    core.controller.add({'v': 1, 'type': 'teach_state', 'recording': false, 'steps': [],
+        'skills': [{'name': 'LMS marks', 'description': 'Enter marks', 'steps': 4}]});
+    await Future<void>.delayed(Duration.zero);
+    expect(c.teach.skills.single.name, 'LMS marks');
+    c.forgetSkill('LMS marks');
+    expect(core.sent.last, {'type': 'forget_skill', 'name': 'LMS marks'});
+  });
+
   test('voice: listen, transcript, level and stop', () async {
     final (c, core) = await started();
     c.toggleListening();

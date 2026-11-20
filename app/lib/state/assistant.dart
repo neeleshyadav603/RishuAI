@@ -139,6 +139,31 @@ class LockInfo {
   final int pausedSeconds;
 }
 
+/// Teach mode: Rishu is recording a task the user shows; taught skills.
+class TeachInfo {
+  TeachInfo([Map<String, dynamic>? e])
+      : recording = e?['recording'] == true,
+        task = '${e?['task'] ?? ''}',
+        steps = [for (final s in (e?['steps'] as List?) ?? const []) '$s'],
+        skills = _skills(e?['skills']);
+
+  static List<({String name, String description, int steps})> _skills(Object? raw) {
+    final out = <({String name, String description, int steps})>[];
+    if (raw is! List) return out;
+    for (final k in raw) {
+      if (k is! Map) continue;
+      final steps = k['steps'];
+      out.add((name: '${k['name'] ?? ''}', description: '${k['description'] ?? ''}', steps: steps is num ? steps.toInt() : 0));
+    }
+    return out;
+  }
+
+  final bool recording;
+  final String task;
+  final List<String> steps;
+  final List<({String name, String description, int steps})> skills;
+}
+
 typedef Connector = Future<CoreConnection> Function();
 
 Future<CoreConnection> connectToBundledCore() async {
@@ -168,6 +193,7 @@ class AssistantController extends ChangeNotifier {
   List<Provider> providers = [];
   VoiceCaps voice = VoiceCaps();
   LockInfo lock = LockInfo();
+  TeachInfo teach = TeachInfo();
   String lockError = '';
   double approvalTimeout = 120;
   bool disconnected = false;
@@ -268,6 +294,8 @@ class AssistantController extends ChangeNotifier {
         items.add(NoticeItem('⏰ ${e['text'] ?? ''}', reminder: true));
       case 'lock_state':
         _lockState(e);
+      case 'teach_state':
+        teach = TeachInfo(e);
       case 'error':
         final code = '${e['code'] ?? ''}';
         if (locked && (code == 'locked' || code.startsWith('unlock_') || code.startsWith('voice_'))) {
@@ -291,6 +319,7 @@ class AssistantController extends ChangeNotifier {
     voice = VoiceCaps(caps['voice'] is Map ? Map<String, dynamic>.from(caps['voice'] as Map) : null);
     approvalTimeout = ((caps['approval_timeout_seconds'] as num?) ?? 120).toDouble();
     lock = LockInfo(e['lock'] is Map ? Map<String, dynamic>.from(e['lock'] as Map) : null);
+    teach = TeachInfo(e['teach'] is Map ? Map<String, dynamic>.from(e['teach'] as Map) : null);
     disconnected = false;
     mood = OrbMood.idle;
     final firstRun = !hasBrain && userName.isEmpty && !_skippedSetup;
@@ -502,6 +531,14 @@ class AssistantController extends ChangeNotifier {
     _streaming = null;
     notifyListeners();
   }
+
+  // ---- teach mode ------------------------------------------------------------
+
+  void teachDone() => sendText(english ? 'Done, I showed you. Please save it.' : 'Bas, ho gaya. Ise save kar lo.');
+
+  void teachCancel() => _core?.send({'type': 'teach_cancel'});
+
+  void forgetSkill(String name) => _core?.send({'type': 'forget_skill', 'name': name});
 
   // ---- lock ------------------------------------------------------------------
 

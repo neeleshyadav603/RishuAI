@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import re
 import threading
 import time
@@ -290,6 +291,87 @@ class Browser:
                 )
             self._settle()
             return result
+
+    # ---- teach mode: record what the user does ----------------------------------
+
+    def start_recording(self, on_step: Callable[[dict[str, Any]], None]) -> str:
+        """Record the user's clicks, typing and page changes until stop_recording()."""
+        with self._lock:
+            self.stop_recording()
+            session = self.session()
+            session.call(
+                "Runtime.addBinding", {"name": "__rishuRecord", "executionContextName": "rishu"}
+            )
+            added = session.call(
+                "Page.addScriptToEvaluateOnNewDocument",
+                {"source": scripts.RECORDER, "worldName": "rishu"},
+            )
+            self._recording = (session, added.get("identifier", ""))
+
+            def listener(method: str, params: dict[str, Any]) -> None:
+                if method == "Runtime.bindingCalled" and params.get("name") == "__rishuRecord":
+                    try:
+                        step = json.loads(params.get("payload") or "{}")
+                    except ValueError:
+                        return
+                    if isinstance(step, dict):
+                        on_step(step)
+                elif method == "Page.frameNavigated":
+                    frame = params.get("frame") or {}
+                    if not frame.get("parentId"):
+                        self._world = None
+                        on_step(
+                            {
+                                "kind": "navigated",
+                                "url": frame.get("url", ""),
+                                "at": time.time() * 1000,
+                            }
+                        )
+
+            self._unlisten = session.on_event(listener)
+            self._world = None
+            context = self._context()
+            session.call(
+                "Runtime.evaluate",
+                {"expression": scripts.RECORDER, "contextId": context, "returnByValue": True},
+            )
+            return self.run("() => location.href", timeout=5) or ""
+
+    def stop_recording(self) -> None:
+        recording = getattr(self, "_recording", None)
+        if not recording:
+            return
+        session, identifier = recording
+        self._recording = None
+        unlisten = getattr(self, "_unlisten", None)
+        if unlisten:
+            unlisten()
+        if session.closed:
+            return
+        try:
+            if identifier:
+                session.call("Page.removeScriptToEvaluateOnNewDocument", {"identifier": identifier})
+            # The recorder left in the open page goes quiet: its binding is gone.
+            session.call("Runtime.removeBinding", {"name": "__rishuRecord"})
+            self._world = None
+        except CdpError:
+            pass
+
+    def find(self, target: dict[str, Any], timeout: float = 10) -> dict[str, Any] | None:
+        """Wait for the control a taught step meant; None if it never shows up."""
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                found = self.run(scripts.FIND, target, timeout=10) or {}
+            except CdpError:
+                found = {}
+            if found.get("found"):
+                self.items[found["ref"]] = {**(found.get("info") or {}), "ref": found["ref"]}
+                return found
+            if time.monotonic() >= deadline:
+                return None
+            self._world = None
+            self._sleep(0.5)
 
     def screenshot(self, quality: int = 70) -> bytes:
         data = self.session().call("Page.captureScreenshot", {"format": "jpeg", "quality": quality})

@@ -343,12 +343,26 @@ class CoreRuntime:
 
     # ---- the global shortcut ------------------------------------------------
 
+    def _teach_state(self) -> dict[str, Any]:
+        teach = getattr(self.registry, "teach", None)
+        if teach is None:
+            return {"recording": False, "skills": []}
+        state = teach.state()
+        state.pop("type", None)
+        return state
+
     def attach(self, session: Any) -> None:
         self.active_session = session
+        teach = getattr(self.registry, "teach", None)
+        if teach is not None:
+            teach.listeners[:] = [session.send_event]
 
     def detach(self, session: Any) -> None:
         if getattr(self, "active_session", None) is session:
             self.active_session = None
+            teach = getattr(self.registry, "teach", None)
+            if teach is not None:
+                teach.listeners[:] = []
 
     def hotkey_pressed(self) -> None:
         """Ctrl+Shift+Space anywhere in Windows: talk to Rishu."""
@@ -370,6 +384,7 @@ class CoreRuntime:
             "settings": self.public_settings(),
             "providers": self.providers(),
             "lock": self.lock.status(),
+            "teach": self._teach_state(),
             "capabilities": {
                 "step_up": self.lock.step_up_ready(),  # PIN + Windows Hello for R3
                 "secure_store": self.secrets.kind,

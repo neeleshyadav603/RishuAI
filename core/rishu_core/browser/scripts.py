@@ -103,7 +103,7 @@ HELPERS = r"""
     return () => 'e' + (++n);
   };
   const byRef = (ref) => document.querySelector('[data-rishu-ref="' + String(ref).replace(/"/g, '') + '"]');
-  const R = { squash, visible, roleOf, nameOf, testIds, rowOf, interactive, describe, nextRef, byRef };
+  const R = { squash, visible, roleOf, nameOf, testIds, rowOf, interactive, describe, nextRef, byRef, SELECTOR };
 """
 
 
@@ -175,3 +175,85 @@ SELECT_OPTION = r"""(ref, wanted) => {
 READY = r"""() => document.readyState"""
 
 HAS_TEXT = r"""(t) => (document.body ? document.body.innerText : '').toLowerCase().includes(t.toLowerCase())"""
+
+# Find the control a recorded step meant: stable test ids first, then the
+# accessible name and role, then the row it sits in (a student's name).
+FIND = r"""(target) => {
+  const low = (t) => R.squash(t).toLowerCase();
+  const want = { name: low(target.name || ''), row: low(target.row || ''), role: target.role || '', ids: target.ids || {} };
+  let best = null, bestScore = 0;
+  for (const el of R.interactive()) {
+    const d = R.describe(el);
+    let score = 0;
+    for (const [k, v] of Object.entries(want.ids)) {
+      if (k === 'name' || k === 'id') continue;
+      if (d.ids[k] === v) score += 5;
+    }
+    if (want.ids.id && d.ids.id === want.ids.id) score += 4;
+    if (want.ids.name && d.ids.name === want.ids.name) score += 2;
+    const name = low(d.name);
+    if (want.name) {
+      if (name === want.name) score += 4;
+      else if (name && (name.includes(want.name) || want.name.includes(name))) score += 2;
+      else score -= 2;
+    }
+    if (want.role && d.role === want.role) score += 1;
+    if (want.row) {
+      const row = low(d.row);
+      if (row && row.includes(want.row)) score += 4;
+      else score -= 4;
+    }
+    if (d.disabled) score -= 1;
+    if (score > bestScore) { best = el; bestScore = score; }
+  }
+  if (!best || bestScore < 4) return { found: false, score: bestScore };
+  let ref = best.getAttribute('data-rishu-ref');
+  if (!ref) { ref = R.nextRef()(); best.setAttribute('data-rishu-ref', ref); }
+  return { found: true, ref, score: bestScore, info: R.describe(best) };
+}"""
+
+# Records what the user does in the page (runs in Rishu's isolated world on
+# every page while teaching). Password fields are never recorded.
+RECORDER = (
+    "(() => {"
+    + HELPERS
+    + r""";
+  if (window.__rishuRecording) return;
+  window.__rishuRecording = true;
+  const send = (step) => {
+    try { window.__rishuRecord(JSON.stringify(Object.assign({ url: location.href, at: Date.now() }, step))); } catch (e) {}
+  };
+  const targetOf = (el) => {
+    const d = R.describe(el);
+    return { role: d.role, name: d.name, ids: d.ids, row: d.row, tag: d.tag, type: d.type || '' };
+  };
+  const control = (node) => (node && node.closest ? node.closest(R.SELECTOR) : null);
+  document.addEventListener('click', (e) => {
+    const el = control(e.target);
+    if (!el) return;
+    const tag = el.tagName.toLowerCase();
+    const type = (el.type || '').toLowerCase();
+    if ((tag === 'input' && !['checkbox', 'radio', 'button', 'submit'].includes(type)) || tag === 'textarea' || tag === 'select') return;
+    send({ kind: 'click', target: targetOf(el) });
+  }, true);
+  document.addEventListener('change', (e) => {
+    const el = control(e.target);
+    if (!el) return;
+    const tag = el.tagName.toLowerCase();
+    const type = (el.type || '').toLowerCase();
+    if (type === 'password' || type === 'file' || type === 'checkbox' || type === 'radio') return;
+    if (tag === 'select') send({ kind: 'select', target: targetOf(el), value: (el.options[el.selectedIndex] || {}).text || '' });
+    else if (tag === 'input' || tag === 'textarea') send({ kind: 'type', target: targetOf(el), value: el.value });
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const el = control(e.target);
+    if (!el || (el.type || '').toLowerCase() === 'password') return;
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'input' || tag === 'textarea') {
+      send({ kind: 'type', target: targetOf(el), value: el.value });
+      send({ kind: 'press', key: 'Enter', target: targetOf(el) });
+    }
+  }, true);
+})()"""
+)

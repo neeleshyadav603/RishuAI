@@ -338,5 +338,39 @@
       "v": 1,
       "type": "enroll_phrase"
     }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "teach_state",
+      "recording": true,
+      "task": "assignment marks",
+      "steps": [
+        "Type \"Priya\" into \"Search students\""
+      ],
+      "skills": [
+        {
+          "name": "LMS marks",
+          "description": "Enter marks",
+          "steps": 4
+        }
+      ]
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "teach_cancel"
+    }
+  },
+  {
+    "dir": "a2c",
+    "event": {
+      "v": 1,
+      "type": "forget_skill",
+      "name": "LMS marks"
+    }
   }
 ]

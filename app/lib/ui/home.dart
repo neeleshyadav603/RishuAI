@@ -8,6 +8,7 @@ import 'chat.dart';
 import 'composer.dart';
 import 'orb.dart';
 import 'settings.dart';
+import 'teach.dart';
 import 'theme.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -212,6 +213,7 @@ class _ChatPane extends StatelessWidget {
         children: [
           _TopBar(controller: c),
           if (c.disconnected) _Disconnected(controller: c),
+          if (c.teach.recording) TeachBanner(controller: c),
           Expanded(child: ChatList(controller: c, onSuggestion: onSuggestion)),
           Composer(controller: c, textController: text, focus: focus),
         ],

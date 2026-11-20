@@ -84,11 +84,15 @@ class ToolRegistry:
         self.reminders: Any = None
         self.memory: Any = None
         self.browser: Any = None
+        self.teach: Any = None
 
     def register(self, tool: Tool) -> None:
         if tool.name in self._tools:
             raise ValueError(f"tool already registered: {tool.name}")
         self._tools[tool.name] = tool
+
+    def unregister(self, name: str) -> None:
+        self._tools.pop(name, None)
 
     def get(self, name: str) -> Tool | None:
         return self._tools.get(name)

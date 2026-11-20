@@ -12,7 +12,8 @@ import httpx
 from ..browser import Browser, ChromeLauncher
 from ..config import Settings, data_dir
 from ..permissions import Risk
-from . import apps, browser, comms, memory, notes, reminders, system, vision, weather, web
+from ..teach import SkillStore
+from . import apps, browser, comms, memory, notes, reminders, system, teach, vision, weather, web
 from .registry import Tool, ToolRegistry, ToolResult
 
 __all__ = ["Tool", "ToolRegistry", "ToolResult", "build_registry"]
@@ -386,4 +387,5 @@ def build_registry(
     )
     registry.browser = web_browser or Browser(ChromeLauncher(folder))
     browser.register(registry, registry.browser, vision_ask)
+    registry.teach = teach.register(registry, registry.browser, SkillStore(folder / "skills.json"))
     return registry

@@ -204,6 +204,7 @@ async def _serve_connection(runtime: CoreRuntime, websocket: WebSocket) -> None:
     send(runtime.hello())
     if runtime.lock.locked:
         session.locked()
+
     try:
         while True:
             raw = await websocket.receive_text()
@@ -244,6 +245,16 @@ async def _serve_connection(runtime: CoreRuntime, websocket: WebSocket) -> None:
                     session.error(
                         "bad_frame", "unlock needs method pin (with pin), hello or voice."
                     )
+            elif kind == "teach_cancel":
+                teach = getattr(runtime.registry, "teach", None)
+                if teach is not None:
+                    await asyncio.to_thread(teach.cancel)
+            elif kind == "forget_skill":
+                name, teach = event.get("name"), getattr(runtime.registry, "teach", None)
+                if isinstance(name, str) and teach is not None and not runtime.lock.locked:
+                    result = await asyncio.to_thread(teach.delete, name)
+                    if not result.ok:
+                        session.error("no_such_skill", result.content)
             elif kind == "lock":
                 if not runtime.lock_now():
                     session.notice_lock_needs_pin()

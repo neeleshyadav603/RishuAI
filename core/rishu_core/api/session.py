@@ -342,6 +342,11 @@ class Session:
     def listen_stop(self) -> None:
         self.recorder.finish()
 
+    def send_event(self, event: dict[str, Any]) -> None:
+        """An event from a tool (teach mode) for the app."""
+        if not self._closed:
+            self._send({"v": PROTOCOL_VERSION, **event})
+
     # ---- lock --------------------------------------------------------------
 
     def send_lock_state(self) -> None:

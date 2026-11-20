@@ -43,14 +43,23 @@ P2 — Browser control (Chrome DevTools Protocol, no new heavy dependency)
       Agent step limit 8 → 20 for website work.
 
 P3 — Teach mode ("sikha do, main seekh loongi")
-- [ ] When no tool or skill fits, Rishu offers to learn instead of refusing.
-- [ ] Recorder: a script injected into Rishu's Chrome records clicks, typing and
+- [x] When no tool or skill fits, Rishu offers to learn instead of refusing (system rules).
+- [x] Recorder: a script injected into Rishu's Chrome records clicks, typing and
       navigation with robust targets (role + name, label, test id, text); the
       user can speak notes while showing; "bas, ho gaya" stops.
-- [ ] Skill = description + steps + parameters (typed values become variables),
+- [x] Skill = description + steps + parameters (typed values become variables),
       saved encrypted in the data folder; list / rename / delete in the app.
-- [ ] Replay with new values (the model fills the parameters), check each step,
+- [x] Replay with new values (the model fills the parameters), check each step,
       ask when a step fails, "aise nahi, aise karo" re-records that step.
+      Done: `rishu_core/teach/` + `tools/teach.py`. The recorder runs in
+      Rishu's isolated JS world on every page (never records password
+      fields); each skill becomes its own tool `skill_<name>` (R2, one
+      approval listing every step with the values); rows that show a typed
+      value follow the parameter ("Absent" in Priya's row → in Rohit's row);
+      skills stored encrypted; app: recording banner with "Bas, ho gaya" /
+      Cancel, Settings → Seekhe hue kaam. Tested with real headless Chrome.
+      Still open: spoken notes while showing; re-recording a single step
+      (today the whole skill is taught again under the same name).
 
 P4 — Lexyta LMS (lms.lexyta.com) — page structure in `docs/lms/lexyta.md`
 - [ ] Built-in skill: mark attendance of a class meeting ("roll 5 aur 12

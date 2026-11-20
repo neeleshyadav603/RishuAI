@@ -107,6 +107,15 @@
     },
     {
       "$ref": "#/$defs/enroll_phrase"
+    },
+    {
+      "$ref": "#/$defs/teach_state"
+    },
+    {
+      "$ref": "#/$defs/teach_cancel"
+    },
+    {
+      "$ref": "#/$defs/forget_skill"
     }
   ],
   "$defs": {
@@ -631,6 +640,40 @@
               "type": "number"
             }
           }
+        },
+        "teach": {
+          "type": "object",
+          "properties": {
+            "recording": {
+              "type": "boolean"
+            },
+            "task": {
+              "type": "string"
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "skills": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "steps": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
         }
       },
       "required": [
@@ -805,6 +848,68 @@
           "const": "enroll_phrase"
         }
       }
+    },
+    "teach_state": {
+      "description": "c2a. Teach mode: whether Rishu is recording a task the user shows, the steps so far, and the taught skills.",
+      "properties": {
+        "type": {
+          "const": "teach_state"
+        },
+        "recording": {
+          "type": "boolean"
+        },
+        "task": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "steps": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "recording"
+      ]
+    },
+    "teach_cancel": {
+      "description": "a2c. Stop teach mode without saving.",
+      "properties": {
+        "type": {
+          "const": "teach_cancel"
+        }
+      }
+    },
+    "forget_skill": {
+      "description": "a2c. Delete a taught skill (Settings).",
+      "properties": {
+        "type": {
+          "const": "forget_skill"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
     }
   }
 }
