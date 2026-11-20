@@ -26,13 +26,21 @@ P1 — Personas and voice
       default, slightly slower and warmer rate); keep the male option.
 
 P2 — Browser control (Chrome DevTools Protocol, no new heavy dependency)
-- [ ] Start Chrome (or Edge) with remote debugging on Rishu's own profile folder;
+- [x] Start Chrome (or Edge) with remote debugging on Rishu's own profile folder;
       the user signs in to sites once in that window (Rishu never stores passwords).
-- [ ] Tools: open a page, read the page as a structured outline (headings,
+- [x] Tools: open a page, read the page as a structured outline (headings,
       buttons, fields with labels, tables/lists with row text, each with a ref),
       click, type, select, press keys, wait for text, screenshot to vision.
       Page text is untrusted. Actions on signed-in sites are R2; "submit / lock /
       send / delete" buttons always need explicit approval.
+      Done: `rishu_core/browser/` (CDP client, launcher, page control in an
+      isolated JS world so page scripts cannot fake labels), tools
+      `browser_open/read/click/type/select/press/look`; links R0, small
+      changes R1, risky labels R2; password fields are never typed into;
+      tested against real headless Chrome (`tests/test_browser.py`).
+- [x] R3 step-up (Phase 3 item, needed after reading pages): approval card +
+      Rishu PIN + Windows Hello; without both set up R3 stays refused.
+      Agent step limit 8 → 20 for website work.
 
 P3 — Teach mode ("sikha do, main seekh loongi")
 - [ ] When no tool or skill fits, Rishu offers to learn instead of refusing.

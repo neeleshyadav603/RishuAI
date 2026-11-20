@@ -9,9 +9,10 @@ from typing import Any
 
 import httpx
 
+from ..browser import Browser, ChromeLauncher
 from ..config import Settings, data_dir
 from ..permissions import Risk
-from . import apps, comms, memory, notes, reminders, system, vision, weather, web
+from . import apps, browser, comms, memory, notes, reminders, system, vision, weather, web
 from .registry import Tool, ToolRegistry, ToolResult
 
 __all__ = ["Tool", "ToolRegistry", "ToolResult", "build_registry"]
@@ -41,6 +42,7 @@ def build_registry(
     whatsapp_installed: Callable[[], bool] | None = None,
     controls: system.SystemControls | None = None,
     vision_ask: vision.VisionAsk | None = None,
+    web_browser: Browser | None = None,
 ) -> ToolRegistry:
     """Create the registry with every Phase 1 tool. Dependencies are injectable for tests."""
     registry = ToolRegistry()
@@ -382,4 +384,6 @@ def build_registry(
             preview_fn=lambda a: "Look at the screen",
         )
     )
+    registry.browser = web_browser or Browser(ChromeLauncher(folder))
+    browser.register(registry, registry.browser, vision_ask)
     return registry

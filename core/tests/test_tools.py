@@ -175,7 +175,13 @@ def test_every_tool_has_a_valid_schema(registry):
     assert registry.names() == [
         "add_note",
         "battery_status",
+        "browser_click",
+        "browser_open",
+        "browser_press",
+        "browser_read",
         "browser_search",
+        "browser_select",
+        "browser_type",
         "cancel_reminder",
         "email_draft",
         "forget",

@@ -278,6 +278,10 @@
         "skill": {
           "type": "string",
           "description": "Set when the tool belongs to a skill (enables 'Always allow')."
+        },
+        "step_up_ready": {
+          "type": "boolean",
+          "description": "For decision step_up: PIN and Windows Hello are set up, so the card can ask for the PIN."
         }
       },
       "required": [
@@ -304,6 +308,11 @@
         "always_allow": {
           "type": "boolean",
           "description": "Mark this skill as trusted (never applies to R3)."
+        },
+        "pin": {
+          "type": "string",
+          "maxLength": 32,
+          "description": "Rishu's PIN, only for step_up (R3) approvals; then Windows Hello is asked on the PC."
         }
       },
       "required": [

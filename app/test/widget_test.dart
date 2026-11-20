@@ -112,6 +112,20 @@ void main() {
     expect(card.status, ApprovalStatus.denied);
   });
 
+  test('R3 cards: blocked without step-up, PIN sent with the approval when ready', () async {
+    final (c, core) = await started();
+    core.controller.add({'v': 1, 'type': 'tool_call_proposed', 'call_id': 'r1', 'tool': 'browser_click', 'args': {},
+        'risk': 'R3', 'decision': 'step_up', 'preview': 'Click "Submit"', 'step_up_ready': false});
+    core.controller.add({'v': 1, 'type': 'tool_call_proposed', 'call_id': 'r2', 'tool': 'browser_click', 'args': {},
+        'risk': 'R3', 'decision': 'step_up', 'preview': 'Click "Submit"', 'step_up_ready': true});
+    await Future<void>.delayed(Duration.zero);
+    final cards = c.items.whereType<ApprovalItem>().toList();
+    expect(cards[0].status, ApprovalStatus.blocked);
+    expect(cards[1].status, ApprovalStatus.pending);
+    c.answer(cards[1], true, pin: '4826');
+    expect(core.sent.last, {'type': 'approval_response', 'call_id': 'r2', 'approved': true, 'pin': '4826'});
+  });
+
   test('voice: listen, transcript, level and stop', () async {
     final (c, core) = await started();
     c.toggleListening();

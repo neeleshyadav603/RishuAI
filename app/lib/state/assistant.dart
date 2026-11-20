@@ -63,7 +63,9 @@ class ApprovalItem extends ChatItem {
     required this.decision,
     required this.reason,
     required this.timeoutSeconds,
+    this.stepUpReady = false,
   });
+  final bool stepUpReady;
   final String callId;
   final String tool;
   final String preview;
@@ -415,8 +417,9 @@ class AssistantController extends ChangeNotifier {
       decision: '${e['decision'] ?? 'confirm'}',
       reason: '${e['reason'] ?? ''}',
       timeoutSeconds: approvalTimeout,
+      stepUpReady: e['step_up_ready'] == true,
     );
-    if (item.decision == 'step_up') item.status = ApprovalStatus.blocked;
+    if (item.decision == 'step_up' && !item.stepUpReady) item.status = ApprovalStatus.blocked;
     items.add(item);
   }
 
@@ -472,10 +475,15 @@ class AssistantController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void answer(ApprovalItem item, bool approved) {
+  void answer(ApprovalItem item, bool approved, {String? pin}) {
     if (item.status != ApprovalStatus.pending) return;
     item.status = approved ? ApprovalStatus.approved : ApprovalStatus.denied;
-    _core?.send({'type': 'approval_response', 'call_id': item.callId, 'approved': approved});
+    _core?.send({
+      'type': 'approval_response',
+      'call_id': item.callId,
+      'approved': approved,
+      if (pin != null && pin.isNotEmpty) 'pin': pin,
+    });
     notifyListeners();
   }
 

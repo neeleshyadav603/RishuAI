@@ -24,4 +24,6 @@ forbidden_tools:
 max_auto_risk: 2
 
 agent:
-  max_steps: 8
+  # Tool calls per turn. Website work (read, click, type, check) needs more
+  # steps than one-shot commands; this bounds runaway loops, not permissions.
+  max_steps: 20

@@ -24,12 +24,21 @@ class SessionApprover:
     timeout, a closed connection or STOP all count as "no".
     """
 
-    def __init__(self, timeout: float, on_step_up_blocked: Callable[[ApprovalRequest], None]):
+    def __init__(
+        self,
+        timeout: float,
+        on_step_up_blocked: Callable[[ApprovalRequest], None],
+        step_up_ready: Callable[[], bool] = lambda: False,
+        verify_step_up: Callable[[str], bool] = lambda pin: False,
+    ):
         self.timeout = timeout
         self._on_step_up_blocked = on_step_up_blocked
+        self._step_up_ready = step_up_ready
+        self._verify_step_up = verify_step_up
         self._cond = threading.Condition()
         self._expected: set[str] = set()
         self._answers: dict[str, bool] = {}
+        self._pins: dict[str, str] = {}
         self._cancelled = False
 
     def expect(self, call_id: str) -> None:
@@ -47,17 +56,29 @@ class SessionApprover:
             return answer and not self._cancelled  # STOP wins over a late "yes"
 
     def step_up(self, request: ApprovalRequest) -> bool:
-        # R3 needs two authentication factors. Until the security module
-        # (Phase 3) exists there is no way to prove them, so the answer is no.
-        self._on_step_up_blocked(request)
-        return False
+        """R3: the user approves on the card with Rishu's PIN, then Windows Hello.
 
-    def resolve(self, call_id: str, approved: bool) -> bool:
+        Two different factors (spec §6): the PIN Rishu knows, and Windows Hello
+        (fingerprint, face or the Windows PIN of this device). Without both set
+        up, the answer is no.
+        """
+        if not self._step_up_ready():
+            self._on_step_up_blocked(request)
+            return False
+        if not self.confirm(request):
+            return False
+        with self._cond:
+            pin = self._pins.pop(request.call_id, "")
+        return bool(pin) and self._verify_step_up(pin)
+
+    def resolve(self, call_id: str, approved: bool, pin: str | None = None) -> bool:
         """Record the user's answer. Returns False when nothing was waiting for it."""
         with self._cond:
             if call_id not in self._expected or call_id in self._answers:
                 return False
             self._answers[call_id] = bool(approved)
+            if pin:
+                self._pins[call_id] = pin
             self._cond.notify_all()
             return True
 
@@ -79,7 +100,10 @@ class Session:
         self.runtime = runtime
         self._send = send  # thread-safe: called from the agent thread
         self.approver = SessionApprover(
-            runtime.server_option("approval_timeout_seconds", 120.0), self._step_up_blocked
+            runtime.server_option("approval_timeout_seconds", 120.0),
+            self._step_up_blocked,
+            step_up_ready=runtime.lock.step_up_ready,
+            verify_step_up=self._verify_step_up,
         )
         self._agent: Agent | None = None
         self._generation = -1
@@ -106,8 +130,10 @@ class Session:
 
     def _emit(self, event: Event) -> None:
         if event.get("type") == "tool_call_proposed":
+            if event.get("decision") == "step_up":
+                event = {**event, "step_up_ready": self.runtime.lock.step_up_ready()}
             self._proposals[event["call_id"]] = event
-            if event.get("decision") == "confirm":
+            if event.get("decision") == "confirm" or event.get("step_up_ready"):
                 self.approver.expect(event["call_id"])
         kind = event.get("type")
         if kind == "state_change" and event.get("state") == "idle" and self._speech_pending:
@@ -146,6 +172,23 @@ class Session:
 
     def error(self, code: str, message: str) -> None:
         self._send({"v": PROTOCOL_VERSION, "type": "error", "code": code, "message": message})
+
+    def _verify_step_up(self, pin: str) -> bool:
+        lock = self.runtime.lock
+        ok, code = lock.check_pin(pin)
+        if not ok:
+            key = "unlock_paused" if code == "paused" else "step_up_wrong_pin"
+            self.error(f"step_up_{code}", t(key, self._language()))
+            return False
+        self._send(
+            {"v": PROTOCOL_VERSION, "type": "notice", "text": t("step_up_hello", self._language())}
+        )
+        if lock.hello is None or not lock.hello.verify(
+            "Rishu: is kaam ko approve karne ke liye pehchaan dikhao"
+        ):
+            self.error("step_up_hello_failed", t("step_up_hello_failed", self._language()))
+            return False
+        return True
 
     def _step_up_blocked(self, request: ApprovalRequest) -> None:
         self._send(
@@ -454,9 +497,11 @@ class Session:
         if was_speaking and not self.busy and not self._closed:
             self._state("idle")
 
-    def approval(self, call_id: str, approved: bool, always_allow: bool = False) -> None:
+    def approval(
+        self, call_id: str, approved: bool, always_allow: bool = False, pin: str | None = None
+    ) -> None:
         proposal = self._proposals.get(call_id)
-        if not self.approver.resolve(call_id, approved):
+        if not self.approver.resolve(call_id, approved, pin):
             self.error("no_such_approval", "That approval is no longer waiting.")
             return
         # "Always allow" marks the skill as trusted for this session. It never

@@ -259,7 +259,10 @@ async def _serve_connection(runtime: CoreRuntime, websocket: WebSocket) -> None:
             elif kind == "approval_response":
                 call_id, approved = event.get("call_id"), event.get("approved")
                 if isinstance(call_id, str) and isinstance(approved, bool):
-                    session.approval(call_id, approved, event.get("always_allow") is True)
+                    pin = event.get("pin") if isinstance(event.get("pin"), str) else None
+                    await asyncio.to_thread(
+                        session.approval, call_id, approved, event.get("always_allow") is True, pin
+                    )
                 else:
                     session.error("bad_frame", "approval_response needs call_id and approved.")
             elif kind == "new_conversation":

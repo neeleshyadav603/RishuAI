@@ -14,7 +14,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "no_llm_setup": "Setup: ek free API key (jaise Groq) Settings mein daalo, ya laptop par Ollama chalao.",
         "offline_prefix": "(Offline mode) ",
         "denied": "Theek hai, yeh nahi kiya.",
-        "step_up_unavailable": "Is kaam ke liye extra security check chahiye, jo abhi set up nahi hai. Isliye yeh nahi kiya.",
+        "step_up_unavailable": "Is bade kaam ke liye do pehchaan chahiye: Settings > Suraksha mein Rishu ka PIN, aur Windows mein Windows Hello (fingerprint, face ya Windows PIN). Ye set karke dobara bolo, tab kar dungi.",
+        "step_up_wrong_pin": "PIN galat tha, isliye ye kaam nahi kiya.",
+        "step_up_hello": "Ab Windows Hello se pehchaan dikhao (fingerprint, face ya Windows PIN).",
+        "step_up_hello_failed": "Windows Hello se pehchaan nahi hui, isliye ye kaam nahi kiya.",
         "not_heard": "Mujhe kuch sunai nahi diya. Mic ke paas bol kar dobara try karo.",
         "mic_silent": "Mic se bilkul bhi awaaz nahi aa rahi. Windows Settings > Privacy & security > Microphone mein "
         "'Microphone access' aur 'Let desktop apps access your microphone' ON karo, aur mic ka mute button check karo.",
@@ -37,7 +40,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "no_llm_setup": "Setup: add a free API key (for example Groq) in Settings, or run Ollama on this laptop.",
         "offline_prefix": "(Offline mode) ",
         "denied": "Okay, I did not do that.",
-        "step_up_unavailable": "This action needs an extra security check that is not set up yet, so I did not do it.",
+        "step_up_unavailable": "This high-risk action needs two checks: Rishu's PIN (Settings > Security) and Windows Hello (fingerprint, face or Windows PIN). Set them up and ask again.",
+        "step_up_wrong_pin": "The PIN was wrong, so I did not do it.",
+        "step_up_hello": "Now confirm with Windows Hello (fingerprint, face or Windows PIN).",
+        "step_up_hello_failed": "Windows Hello did not confirm, so I did not do it.",
         "not_heard": "I didn't hear anything. Please speak closer to the mic and try again.",
         "mic_silent": "The microphone sends only silence. In Windows Settings > Privacy & security > Microphone, turn on "
         "'Microphone access' and 'Let desktop apps access your microphone', and check the mic's mute button.",

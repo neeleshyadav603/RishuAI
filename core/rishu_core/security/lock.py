@@ -278,12 +278,13 @@ class LockManager:
             return False
         return self._clock() - self._last_activity >= self.idle_minutes * 60
 
-    def _attempt(self, ok: bool) -> tuple[bool, str]:
+    def _attempt(self, ok: bool, unlock: bool = True) -> tuple[bool, str]:
         if ok:
-            self.locked = False
+            if unlock:
+                self.locked = False
             self._failures = 0
             self.touch()
-            return True, "unlocked"
+            return True, "unlocked" if unlock else "ok"
         self._failures += 1
         if self._failures >= MAX_FAILURES:
             self._failures = 0
@@ -300,6 +301,18 @@ class LockManager:
         if self._paused():
             return False, "paused"
         return self._attempt(self._matches(self._load().get("pin"), pin))
+
+    def check_pin(self, pin: str) -> tuple[bool, str]:
+        """PIN check for step-up approval (R3): counts failures like unlocking, never unlocks."""
+        if not self.pin_set:
+            return False, "no_pin"
+        if self._paused():
+            return False, "paused"
+        return self._attempt(self._matches(self._load().get("pin"), pin), unlock=False)
+
+    def step_up_ready(self) -> bool:
+        """Two different factors are available: Rishu's PIN and Windows Hello."""
+        return self.pin_set and bool(self.hello and self.hello.known())
 
     def unlock_phrase(self, transcript: str) -> tuple[bool, str]:
         if not self.locked:

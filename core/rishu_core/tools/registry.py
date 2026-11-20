@@ -83,6 +83,7 @@ class ToolRegistry:
         # Shared stores that the runtime and the system prompt read as well.
         self.reminders: Any = None
         self.memory: Any = None
+        self.browser: Any = None
 
     def register(self, tool: Tool) -> None:
         if tool.name in self._tools:

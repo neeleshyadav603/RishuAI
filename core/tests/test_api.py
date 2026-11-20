@@ -254,7 +254,7 @@ def test_unanswered_approval_times_out_as_no(settings, registry, tmp_path):
     assert sent == []
 
 
-def test_r3_is_blocked_until_step_up_exists(settings, registry, tmp_path):
+def test_r3_is_blocked_without_pin_and_windows_hello(settings, registry, tmp_path):
     sent = []
     add_send_tool(registry, sent, risk=Risk.R3)
     runtime = make_runtime(
@@ -283,7 +283,69 @@ def test_r3_is_blocked_until_step_up_exists(settings, registry, tmp_path):
         events = read_turn(ws)
     assert sent == []
     notices = [e["text"] for e in events if e["type"] == "notice"]
-    assert any("security check" in text for text in notices)
+    assert any("Windows Hello" in text for text in notices)
+    assert proposal["step_up_ready"] is False
+
+
+class FakeHello:
+    def __init__(self, answer=True):
+        self.answer, self.asked = answer, 0
+
+    def known(self):
+        return True
+
+    def available(self):
+        return True
+
+    def verify(self, message=""):
+        self.asked += 1
+        return self.answer
+
+
+def step_up_turn(settings, registry, tmp_path, answer, hello_answer=True):
+    sent = []
+    add_send_tool(registry, sent, risk=Risk.R3)
+    runtime = make_runtime(
+        settings,
+        registry,
+        tmp_path,
+        [[{"name": "send_message", "arguments": {"to": "Bank", "text": "pay"}}], "Theek hai."],
+    )
+    hello = FakeHello(hello_answer)
+    runtime.lock.hello = hello
+    runtime.lock.set_pin("4826")
+    client = TestClient(create_app(runtime))
+    with client.websocket_connect("/ws", headers=AUTH) as ws:
+        read_until(ws, "hello")
+        say(ws, "bhejo")
+        proposal = read_until(ws, "tool_call_proposed")[-1]
+        assert proposal["decision"] == "step_up" and proposal["step_up_ready"] is True
+        ws.send_text(
+            json.dumps(
+                {"v": 1, "type": "approval_response", "call_id": proposal["call_id"], **answer}
+            )
+        )
+        events = read_turn(ws)
+    return sent, hello, events
+
+
+def test_r3_runs_after_pin_and_windows_hello(settings, registry, tmp_path):
+    sent, hello, _ = step_up_turn(settings, registry, tmp_path, {"approved": True, "pin": "4826"})
+    assert sent == [("Bank", "pay")] and hello.asked == 1
+
+
+@pytest.mark.parametrize(
+    "answer,hello_answer,asked",
+    [
+        ({"approved": True, "pin": "0000"}, True, 0),  # wrong PIN: Windows Hello is not even asked
+        ({"approved": True}, True, 0),  # no PIN
+        ({"approved": False, "pin": "4826"}, True, 0),  # the user said no
+        ({"approved": True, "pin": "4826"}, False, 1),  # Windows Hello failed
+    ],
+)
+def test_r3_needs_both_factors(settings, registry, tmp_path, answer, hello_answer, asked):
+    sent, hello, _ = step_up_turn(settings, registry, tmp_path, answer, hello_answer)
+    assert sent == [] and hello.asked == asked
 
 
 def test_always_allow_trusts_the_skill_but_never_r3(settings, registry, tmp_path):

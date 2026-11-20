@@ -377,14 +377,30 @@ class ToolStep extends StatelessWidget {
   }
 }
 
-class ApprovalCard extends StatelessWidget {
+class ApprovalCard extends StatefulWidget {
   const ApprovalCard({super.key, required this.item, required this.controller});
   final ApprovalItem item;
   final AssistantController controller;
 
   @override
+  State<ApprovalCard> createState() => _ApprovalCardState();
+}
+
+class _ApprovalCardState extends State<ApprovalCard> {
+  final _pin = TextEditingController();
+
+  ApprovalItem get item => widget.item;
+
+  @override
+  void dispose() {
+    _pin.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final c = controller;
+    final c = widget.controller;
+    final stepUp = item.decision == 'step_up';
     final pending = item.status == ApprovalStatus.pending;
     final accent = item.risk == 'R3' ? RishuColors.red : RishuColors.amber;
     final status = switch (item.status) {
@@ -394,8 +410,8 @@ class ApprovalCard extends StatelessWidget {
       ApprovalStatus.expired => tr(c, '⌛ Time khatam, nahi kiya', '⌛ Timed out, not done'),
       ApprovalStatus.blocked => tr(
           c,
-          '🔒 Is kaam ke liye extra security chahiye (agle version mein aa raha hai)',
-          '🔒 Needs extra security (coming in a later version)',
+          '🔒 Is bade kaam ke liye Rishu PIN + Windows Hello chahiye (Settings > Suraksha)',
+          '🔒 Needs Rishu\'s PIN + Windows Hello (Settings > Security)',
         ),
     };
     return Align(
@@ -434,13 +450,33 @@ class ApprovalCard extends StatelessWidget {
             if (pending) ...[
               _Countdown(seconds: item.timeoutSeconds, color: accent, onDone: () => c.expire(item)),
               const SizedBox(height: 12),
+              if (stepUp) ...[
+                Text(
+                  tr(c, 'Bada kaam hai: Rishu PIN daalo, phir PC par Windows Hello se pehchaan dikhao.',
+                      'High risk: enter Rishu\'s PIN, then confirm with Windows Hello on the PC.'),
+                  style: const TextStyle(color: RishuColors.muted, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: 220,
+                  child: TextField(
+                    key: ValueKey('step-up-pin-${item.callId}'),
+                    controller: _pin,
+                    obscureText: true,
+                    maxLength: 12,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'PIN', counterText: ''),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
               Row(
                 children: [
                   FilledButton.icon(
                     style: FilledButton.styleFrom(backgroundColor: RishuColors.green, foregroundColor: Colors.black),
-                    onPressed: () => c.answer(item, true),
-                    icon: const Icon(Icons.check_rounded),
-                    label: Text(tr(c, 'Haan, karo', 'Yes, do it')),
+                    onPressed: () => stepUp ? c.answer(item, true, pin: _pin.text.trim()) : c.answer(item, true),
+                    icon: Icon(stepUp ? Icons.fingerprint_rounded : Icons.check_rounded),
+                    label: Text(stepUp ? tr(c, 'PIN + Windows Hello se karo', 'Approve with PIN + Hello') : tr(c, 'Haan, karo', 'Yes, do it')),
                   ),
                   const SizedBox(width: 10),
                   OutlinedButton.icon(

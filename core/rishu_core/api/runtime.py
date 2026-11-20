@@ -371,7 +371,7 @@ class CoreRuntime:
             "providers": self.providers(),
             "lock": self.lock.status(),
             "capabilities": {
-                "step_up": False,  # arrives with the security module (Phase 3)
+                "step_up": self.lock.step_up_ready(),  # PIN + Windows Hello for R3
                 "secure_store": self.secrets.kind,
                 "keys_persist": bool(self.secrets.persistent),
                 # How long an approval card waits before it counts as "no".
