@@ -135,6 +135,40 @@ class SystemControls:
             return False
         return result.returncode == 0 and path.exists() and path.stat().st_size > 0
 
+    def shrink_image(self, source: Path, target: Path, max_width: int = 1600) -> bool:
+        """A smaller JPEG copy of a photo (register pages, documents) for the vision model."""
+        if self.platform != "win32":
+            return False
+        script = (
+            "Add-Type -AssemblyName System.Drawing;"
+            "$img=[System.Drawing.Image]::FromFile($args[0]);"
+            "$w=[Math]::Min([int]$args[2],$img.Width);$h=[int]($img.Height*$w/$img.Width);"
+            "$small=New-Object System.Drawing.Bitmap $img,$w,$h;"
+            "$codec=[System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders()|Where-Object{$_.MimeType -eq 'image/jpeg'};"
+            "$p=New-Object System.Drawing.Imaging.EncoderParameters 1;"
+            "$p.Param[0]=New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality,[long]82);"
+            "$small.Save($args[1],$codec,$p);$img.Dispose()"
+        )
+        try:
+            result = self._run(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-Command",
+                    f"& {{{script}}}",
+                    str(source),
+                    str(target),
+                    str(max_width),
+                ],
+                capture_output=True,
+                timeout=30,
+                creationflags=CREATE_NO_WINDOW,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        return result.returncode == 0 and target.exists() and target.stat().st_size > 0
+
     def lock_pc(self) -> ToolResult:
         if problem := self._windows_only():
             return problem

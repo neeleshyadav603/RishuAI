@@ -78,9 +78,17 @@ P4 — Lexyta LMS (lms.lexyta.com) — page structure in `docs/lms/lexyta.md`
       one-line reason; one approval for the whole table, then enter.
 
 P5 — Sheets, Excel, CSV and register photos
-- [ ] Read and fill .xlsx/.csv (attendance, marks), fuzzy name matching
+- [x] Read and fill .xlsx/.csv (attendance, marks), fuzzy name matching
       ("Aryan" ↔ "Aryan Kumar", roll numbers), preview table → approval → write.
-- [ ] Photo of a handwritten register → vision model → table → match → fill.
+      Done: `tools/sheets.py` — find_files (Desktop/Documents/Downloads/OneDrive),
+      sheet_read, sheet_fill (R2; the approval card lists every "row ← value";
+      ambiguous or unknown people block the whole write; header row found
+      below title rows; numbers stay numbers; new column added if missing;
+      backup copy in the data folder; openpyxl, MIT).
+- [x] Photo of a handwritten register → vision model → table → match → fill.
+      Done: read_image (photo shrunk with System.Drawing on Windows, sent to
+      the Groq vision model, result untrusted) → Rishu shows what it read →
+      the user confirms → sheet_fill (next turn, normal R2 approval).
 - [ ] Google Sheets through the browser tools (P2).
 
 P6 — WhatsApp and email on command

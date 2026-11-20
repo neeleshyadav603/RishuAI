@@ -21,6 +21,7 @@ from . import (
     memory,
     notes,
     reminders,
+    sheets,
     system,
     teach,
     vision,
@@ -402,4 +403,83 @@ def build_registry(
     browser.register(registry, registry.browser, vision_ask)
     registry.teach = teach.register(registry, registry.browser, SkillStore(folder / "skills.json"))
     lexyta.register(registry, registry.browser)
+    _register_files(registry, folder, controls, vision_ask)
     return registry
+
+
+def _register_files(
+    registry: ToolRegistry, folder: Path, controls: system.SystemControls, vision_ask: Any
+) -> None:
+    """Files on this computer: find them, read and fill sheets, read photos."""
+    registry.register(
+        Tool(
+            name="find_files",
+            description=(
+                "Find files on this computer by part of the name (Desktop, Documents, Downloads, OneDrive), "
+                "newest first. Use before reading or filling a sheet or photo the user names."
+            ),
+            parameters=_obj(
+                {"query": {"type": "string", "description": "Words from the file name"}}, ["query"]
+            ),
+            risk=Risk.R0,
+            handler=sheets.find_files,
+        )
+    )
+    registry.register(
+        Tool(
+            name="sheet_read",
+            description="Read an Excel (.xlsx) or CSV file: columns and the first rows.",
+            parameters=_obj({"path": {"type": "string"}, "sheet": {"type": "string"}}, ["path"]),
+            risk=Risk.R0,
+            handler=sheets.read_sheet,
+            untrusted_output=True,
+        )
+    )
+    registry.register(
+        Tool(
+            name="sheet_fill",
+            description=(
+                "Fill one column of an Excel (.xlsx) or CSV file by person: values maps a name or roll number "
+                '(or its last digits) to the value, e.g. {"Aryan": "8", "12": "9"}. A missing column is '
+                "added. Nothing is written if anyone does not match exactly one row."
+            ),
+            parameters=_obj(
+                {
+                    "path": {"type": "string"},
+                    "column": {
+                        "type": "string",
+                        "description": "Column title to fill, e.g. 'Assignment 1' or '21 Nov'",
+                    },
+                    "values": {"type": "object", "description": "Name or roll number -> value"},
+                    "sheet": {"type": "string"},
+                    "match_column": {
+                        "type": "string",
+                        "description": "Optional: the column with names or roll numbers",
+                    },
+                },
+                ["path", "column", "values"],
+            ),
+            risk=Risk.R2,
+            handler=lambda path, column, values, sheet="", match_column="": sheets.fill_sheet(
+                path, column, values, sheet, match_column, backup_dir=folder / "backups"
+            ),
+            preview_fn=sheets.preview_fill,
+        )
+    )
+    registry.register(
+        Tool(
+            name="read_image",
+            description=(
+                "Read a photo on this computer with the vision model, e.g. a handwritten attendance register: "
+                "ask for every row as 'name | roll number | value' so it can go into a sheet."
+            ),
+            parameters=_obj(
+                {"path": {"type": "string"}, "question": {"type": "string"}}, ["path", "question"]
+            ),
+            risk=Risk.R0,
+            handler=lambda path, question: vision.read_image(
+                path, question, controls.shrink_image, vision_ask, folder / "tmp"
+            ),
+            untrusted_output=True,
+        )
+    )
