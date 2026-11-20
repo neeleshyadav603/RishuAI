@@ -264,7 +264,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('persona-personal')));
     await tester.pump(const Duration(milliseconds: 300));
-    expect(core.bodies.whereType<Map<String, dynamic>>(), contains({'persona': 'personal', 'voice_gender': 'female'}));
+    expect(core.bodies.whereType<Map<String, dynamic>>(), anyElement(equals({'persona': 'personal', 'voice_gender': 'female'})));
     expect(core.sent.last['type'], 'speak');
     await tester.ensureVisible(find.byKey(const ValueKey('about-me')));
     await tester.pump();
