@@ -186,9 +186,11 @@ def test_every_tool_has_a_valid_schema(registry):
         "email_draft",
         "find_files",
         "forget",
+        "forget_contact",
         "forget_skill",
         "get_time",
         "lexyta_mark_attendance",
+        "list_contacts",
         "list_memories",
         "list_notes",
         "list_reminders",
@@ -201,6 +203,7 @@ def test_every_tool_has_a_valid_schema(registry):
         "read_image",
         "read_page",
         "remember",
+        "save_contact",
         "screenshot",
         "set_reminder",
         "sheet_fill",
@@ -212,6 +215,7 @@ def test_every_tool_has_a_valid_schema(registry):
         "weather",
         "web_search",
         "whatsapp_draft",
+        "whatsapp_send",
     ]
     for schema in registry.schemas():
         function = schema["function"]

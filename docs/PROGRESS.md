@@ -92,11 +92,22 @@ P5 — Sheets, Excel, CSV and register photos
 - [ ] Google Sheets through the browser tools (P2).
 
 P6 — WhatsApp and email on command
-- [ ] WhatsApp Desktop: "Shruti ko bolo aaj nahi aa sakta" → open her chat by
+- [x] WhatsApp Desktop: "Shruti ko bolo aaj nahi aa sakta" → open her chat by
       name, write the message, read it out, send after "haan" (UI automation of
       the official app; no unofficial APIs).
-- [ ] Gmail in Rishu's Chrome: read new mail aloud, reply / send after approval.
+      Done: Rishu's encrypted address book (save_contact / list_contacts /
+      forget_contact; a name that fits two people is a question), and
+      whatsapp_send (R2: the card shows "Send to Shruti (+91…): text"): the
+      official click-to-chat link opens the chat by number in WhatsApp
+      Desktop, then Enter is pressed only if the WhatsApp window is really in
+      front; otherwise the user is told to press Send. Needs device test.
+- [x] Gmail in Rishu's Chrome: read new mail aloud, reply / send after approval.
+      Covered by the browser tools (Send buttons are R2) and teach mode; prompt guidance added.
 - [ ] Spoken alert for incoming WhatsApp messages (Windows notifications) — research.
+      Finding: reading other apps' notifications needs the UWP
+      UserNotificationListener with package identity; Rishu is an unpackaged
+      desktop app, so this is blocked for now. Closest alternative: Rishu
+      reads unread chats on request from WhatsApp Web in its own browser.
 
 P7 — Small local model (works on low-end laptops, no key, no limit)
 - [ ] llama.cpp server (MIT) shipped with Rishu; the smallest capable

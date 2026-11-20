@@ -183,13 +183,10 @@ class Table:
 
     def save(self) -> None:
         if self.kind == ".csv":
-            buffer = io.StringIO()
-            writer = csv.writer(buffer, self.dialect)
-            writer.writerows(self.rows)
-            self.path.write_text(
-                buffer.getvalue(),
-                encoding="utf-8-sig" if self.path.read_bytes()[:3] == b"\xef\xbb\xbf" else "utf-8",
-            )
+            encoding = "utf-8-sig" if self.path.read_bytes()[:3] == b"\xef\xbb\xbf" else "utf-8"
+            # newline="": the csv writer chooses the line endings (no doubled \r on Windows).
+            with self.path.open("w", encoding=encoding, newline="") as handle:
+                csv.writer(handle, self.dialect).writerows(self.rows)
         else:
             self._wb.save(self.path)
 

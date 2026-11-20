@@ -63,6 +63,7 @@ def registry(settings, spawned, opened_urls, tmp_path):
         now=lambda: datetime(2026, 11, 16, 9, 30),
         uri_opener=lambda uri: opened_urls.append(uri) or True,
         whatsapp_installed=lambda: True,
+        whatsapp_press_send=lambda: True,  # never a real key press in tests
         controls=SystemControls(
             platform="win32", press=lambda vk: None, lock=lambda: True, battery=lambda: (80, False)
         ),

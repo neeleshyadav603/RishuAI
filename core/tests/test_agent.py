@@ -78,7 +78,7 @@ def test_chrome_kholo_runs_r1_without_asking(settings, registry, spawned, tmp_pa
     ]
     # The model saw the system prompt, the tools, and then the tool result.
     assert llm.calls[0]["messages"][0]["role"] == "system"
-    assert len(llm.calls[0]["tools"]) == 39
+    assert len(llm.calls[0]["tools"]) == 43
     assert llm.calls[1]["messages"][-1] == {
         "role": "tool",
         "tool_call_id": "call_1_0",

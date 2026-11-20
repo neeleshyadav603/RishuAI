@@ -17,6 +17,7 @@ from . import (
     apps,
     browser,
     comms,
+    contacts,
     lexyta,
     memory,
     notes,
@@ -55,6 +56,7 @@ def build_registry(
     now: Callable[[], datetime] = datetime.now,
     uri_opener: Callable[[str], bool] | None = None,
     whatsapp_installed: Callable[[], bool] | None = None,
+    whatsapp_press_send: Callable[[], bool] | None = None,
     controls: system.SystemControls | None = None,
     vision_ask: vision.VisionAsk | None = None,
     web_browser: Browser | None = None,
@@ -219,6 +221,82 @@ def build_registry(
             ),
             preview_fn=lambda a: (
                 f"Open WhatsApp{' for ' + a['phone'] if a.get('phone') else ''} with the message: {a.get('text', '')}"
+            ),
+        )
+    )
+    people = contacts.ContactStore(folder / "contacts.json")
+    registry.contacts = people
+    press_send = whatsapp_press_send or comms.press_send_in_whatsapp
+
+    def send_whatsapp(to: str, text: str) -> ToolResult:
+        contact, problem = contacts.resolve(people, to)
+        if contact is None:
+            return ToolResult(False, problem)
+        return comms.whatsapp_send(contact, text, open_uri, wa_installed, press_send)
+
+    registry.register(
+        Tool(
+            name="whatsapp_send",
+            description=(
+                "Send a WhatsApp message to a contact saved in Rishu (by name) or to a number, through the "
+                "official WhatsApp Desktop app. The user approves the exact recipient and text first. "
+                "Write the message the way the user would, in their language. One person at a time."
+            ),
+            parameters=_obj(
+                {
+                    "to": {
+                        "type": "string",
+                        "description": "Contact name as saved in Rishu, or a phone number",
+                    },
+                    "text": {"type": "string", "description": "The message"},
+                },
+                ["to", "text"],
+            ),
+            risk=Risk.R2,
+            handler=send_whatsapp,
+            preview_fn=lambda a: contacts.describe(people, a),
+        )
+    )
+    registry.register(
+        Tool(
+            name="save_contact",
+            description="Save or update a contact in Rishu's encrypted address book: name, WhatsApp number, e-mail.",
+            parameters=_obj(
+                {
+                    "name": {"type": "string"},
+                    "phone": {"type": "string"},
+                    "email": {"type": "string"},
+                },
+                ["name"],
+            ),
+            risk=Risk.R1,
+            handler=lambda name, phone="", email="": contacts.save_contact(
+                people, name, phone, email
+            ),
+            preview_fn=lambda a: (
+                f"Save contact {a.get('name', '')} {a.get('phone', '')} {a.get('email', '')}".strip()
+            ),
+        )
+    )
+    registry.register(
+        Tool(
+            name="list_contacts",
+            description="List the contacts saved in Rishu.",
+            parameters=_obj({}),
+            risk=Risk.R0,
+            handler=lambda: contacts.list_contacts(people),
+        )
+    )
+    registry.register(
+        Tool(
+            name="forget_contact",
+            description="Delete a contact from Rishu's address book.",
+            parameters=_obj({"name": {"type": "string"}}, ["name"]),
+            risk=Risk.R1,
+            handler=lambda name: (
+                ToolResult(True, f"Deleted {name}.")
+                if people.delete(name)
+                else ToolResult(False, f"No contact called {name}.")
             ),
         )
     )
