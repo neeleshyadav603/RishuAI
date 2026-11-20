@@ -62,9 +62,16 @@ P3 — Teach mode ("sikha do, main seekh loongi")
       (today the whole skill is taught again under the same name).
 
 P4 — Lexyta LMS (lms.lexyta.com) — page structure in `docs/lms/lexyta.md`
-- [ ] Built-in skill: mark attendance of a class meeting ("roll 5 aur 12
+- [x] Built-in skill: mark attendance of a class meeting ("roll 5 aur 12
       absent, baaki present"): search/paginate, set each status, then "Mark
       remaining as present"; "Submit & lock attendance" only after approval.
+      Done: `lexyta_mark_attendance` (R2, one approval): reads every page,
+      matches roll numbers / last digits / names, refuses ambiguous or
+      unknown students before changing anything, sets each status per row
+      (no bulk-button dialogs), re-reads to verify, locks only with lock=true
+      and reports an open confirmation box instead of clicking it. Page
+      outlines now include clickable rows (meeting list). Tested on a
+      stand-in page with Lexyta's structure (45 made-up students, 3 pages).
 - [ ] Enter assignment / sessional marks — needs the gradebook pages (asked in
       `docs/NEEDS_USER.md`).
 - [ ] Check Word submissions: suggest marks within the owner's range with a

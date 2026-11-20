@@ -37,3 +37,14 @@ CSS classes.
   button `lexytatestid=attendance-clear`.
 - Select-all checkbox `aria-label="Select all students on this page"`, row checkbox
   `aria-label="Select student"`.
+
+## Rows Rishu reads
+
+- Home: `a[lexytatestid=teaching-class-row]` per class the user teaches (links to `/classes/{id}`),
+  gradebook links `/classes/{id}/assignments/{id}/gradebook`.
+- Meetings list: `li` rows (pointer cursor, no role) containing `div[lexytatestid=professor-meeting-row]`
+  with title, start time, end, duration, provider and a status badge; a row menu button (ellipsis);
+  menu `lexyta-menu-select[testid=meetings-attendance-lock-menu]` above the list.
+- Attendance row: `li` > `lms-user-column` (leaf spans: name, college roll number, e-mail) +
+  `lexyta-segmented-control[testid=attendance-mark]` > `[role=tablist]` > four `button[role=tab]`.
+  `lexyta_mark_attendance` reads the leaf spans, so the layout (flex column or inline) does not matter.

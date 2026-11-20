@@ -29,6 +29,7 @@ HELPERS = r"""
       return 'textbox';
     }
     if (el.isContentEditable) return 'textbox';
+    if (tag === 'li' || tag === 'tr' || getComputedStyle(el).cursor === 'pointer') return 'row';
     return tag;
   };
   const nameOf = (el) => {
@@ -74,7 +75,23 @@ HELPERS = r"""
   const SELECTOR = 'a[href], button, input, textarea, select, summary, [contenteditable=""], [contenteditable=true],' +
     '[role=button], [role=tab], [role=link], [role=checkbox], [role=radio], [role=menuitem], [role=option],' +
     '[role=switch], [role=combobox], [role=textbox], [role=searchbox], [role=gridcell][tabindex]';
-  const interactive = () => Array.from(document.querySelectorAll(SELECTOR)).filter(visible);
+  // Plus clickable rows that are not buttons in the markup (list items, table
+  // rows and cards with a pointer cursor), as many web apps use them.
+  const clickableRows = (known) => {
+    const out = [];
+    for (const el of document.querySelectorAll('li, tr, [lexytatestid$="-row"], [testid$="-row"], [data-testid$="-row"], [tabindex="0"]')) {
+      if (out.length >= 150) break;
+      if (known.has(el) || !visible(el) || el.closest('a[href], button')) continue;
+      if (getComputedStyle(el).cursor !== 'pointer') continue;
+      if (out.some((o) => o.contains(el))) continue;
+      out.push(el);
+    }
+    return out;
+  };
+  const interactive = () => {
+    const base = Array.from(document.querySelectorAll(SELECTOR)).filter(visible);
+    return base.concat(clickableRows(new Set(base)));
+  };
   const describe = (el) => {
     const d = {
       tag: el.tagName.toLowerCase(), role: roleOf(el), name: nameOf(el), ids: testIds(el), row: rowOf(el),

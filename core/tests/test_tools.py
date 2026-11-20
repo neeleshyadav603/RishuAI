@@ -187,6 +187,7 @@ def test_every_tool_has_a_valid_schema(registry):
         "forget",
         "forget_skill",
         "get_time",
+        "lexyta_mark_attendance",
         "list_memories",
         "list_notes",
         "list_reminders",
