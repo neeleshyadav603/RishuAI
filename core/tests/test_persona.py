@@ -41,8 +41,14 @@ def test_unknown_persona_falls_back_to_professional(settings):
 
 def test_settings_validate_persona_and_texts(tmp_path):
     store = UserSettings(tmp_path / "settings.json")
-    store.update({"persona": "personal", "address_as": "  Sir  ", "about_me": "Line one\nline   two"})
-    assert store.load() == {"persona": "personal", "address_as": "Sir", "about_me": "Line one line two"}
+    store.update(
+        {"persona": "personal", "address_as": "  Sir  ", "about_me": "Line one\nline   two"}
+    )
+    assert store.load() == {
+        "persona": "personal",
+        "address_as": "Sir",
+        "about_me": "Line one line two",
+    }
     with pytest.raises(ValueError):
         store.update({"persona": "romantic"})
     with pytest.raises(ValueError):
