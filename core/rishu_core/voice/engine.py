@@ -52,6 +52,15 @@ class VoiceEngine:
         self._transport = transport
         self._mic_status: tuple[bool, str] | None = None
 
+    def set_persona(self, persona: str) -> None:
+        """Speaking rate for the persona (config `voice.persona_rate`)."""
+        rates = self.cfg.get("persona_rate") or {}
+        rate = str(rates.get(persona) or self.cfg.get("rate", "+0%"))
+        chain = getattr(self.synthesizer, "synthesizers", [self.synthesizer])
+        for synth in chain:
+            if isinstance(synth, EdgeSynthesizer):
+                synth.rate = rate
+
     # ---- capabilities --------------------------------------------------
 
     def stt_provider(self) -> tuple[str, Mapping[str, Any]]:

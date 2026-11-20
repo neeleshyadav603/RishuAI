@@ -538,6 +538,20 @@
             },
             "follow_up": {
               "type": "boolean"
+            },
+            "persona": {
+              "enum": [
+                "professional",
+                "personal"
+              ]
+            },
+            "address_as": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "about_me": {
+              "type": "string",
+              "maxLength": 600
             }
           },
           "required": [

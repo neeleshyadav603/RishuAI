@@ -16,13 +16,13 @@ and the Android app. Voice cloning is on hold. A new installer only when a
 group of items is done (not after every step).
 
 P1 — Personas and voice
-- [ ] Setting `persona`: `professional` (default) and `personal` (warm, caring,
+- [x] Setting `persona`: `professional` (default) and `personal` (warm, caring,
       a little playful, uses the owner's name; still honest that it is an AI,
       nothing sexual, never guilt-trips or discourages time with people).
-      Prompts in `shared/prompts/personas/`; picker in Settings and onboarding.
-- [ ] Personalisation: how Rishu addresses the user ("Sir", name, …) and a free
+      Prompts in `shared/prompts/personas/`; picker in Settings (onboarding picker: later).
+- [x] Personalisation: how Rishu addresses the user ("Sir", name, …) and a free
       "About me / how to talk to me" text added to the system prompt.
-- [ ] Natural Indian voice per persona (personal → female Swara/Neerja by
+- [x] Natural Indian voice per persona (personal → female Swara/Neerja by
       default, slightly slower and warmer rate); keep the male option.
 
 P2 — Browser control (Chrome DevTools Protocol, no new heavy dependency)

@@ -6,11 +6,13 @@ import 'package:rishu/core/connection.dart';
 import 'package:rishu/main.dart';
 import 'package:rishu/state/assistant.dart';
 import 'package:rishu/ui/markdown.dart';
+import 'package:rishu/ui/settings.dart';
 
 class FakeCore implements CoreConnection {
   final controller = StreamController<Map<String, dynamic>>.broadcast();
   final sent = <Map<String, dynamic>>[];
   final requests = <String>[];
+  final bodies = <Map<String, dynamic>?>[];
 
   @override
   Stream<Map<String, dynamic>> get events => controller.stream;
@@ -21,6 +23,7 @@ class FakeCore implements CoreConnection {
   @override
   Future<Map<String, dynamic>> request(String method, String path, [Map<String, dynamic>? body]) async {
     requests.add('$method $path');
+    bodies.add(body);
     if (path.startsWith('/v1/settings')) return {'settings': {'user_name': 'Neelesh', 'language': 'hinglish'}};
     if (path.startsWith('/v1/activity')) return {'entries': []};
     if (path.startsWith('/v1/voice')) return {'input': true, 'output': true};
@@ -207,6 +210,30 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     expect(find.textContaining('Namaste, Neelesh'), findsOneWidget);
     expect(find.byKey(const ValueKey('sidebar-lock')), findsOneWidget);
+  });
+
+  testWidgets('choosing the personal style saves it with a woman\'s voice and says hello', (tester) async {
+    tester.view.physicalSize = const Size(1400, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final core = FakeCore();
+    final controller = AssistantController(connector: () async => core);
+    await tester.runAsync(() async {
+      await controller.boot();
+      core.controller.add(hello());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: SettingsScreen(controller: controller))));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Professional'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('persona-personal')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(core.bodies.whereType<Map<String, dynamic>>(), contains({'persona': 'personal', 'voice_gender': 'female'}));
+    expect(core.sent.last['type'], 'speak');
+    await tester.enterText(find.byKey(const ValueKey('about-me')), 'Main GITM mein padhata hoon.');
+    await tester.tap(find.byKey(const ValueKey('save-about-me')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(core.bodies.last, {'about_me': 'Main GITM mein padhata hoon.'});
   });
 
   testWidgets('boot failure shows a retry button', (tester) async {

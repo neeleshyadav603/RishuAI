@@ -396,6 +396,9 @@ def test_settings_round_trip_and_validation(settings, registry, tmp_path):
         "streaming": True,
         "speak_replies": True,
         "follow_up": False,
+        "persona": "professional",
+        "address_as": "",
+        "about_me": "",
         "autonomy": "smart",
     }
     changed = client.put(

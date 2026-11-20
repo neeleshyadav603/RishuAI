@@ -17,6 +17,10 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _name = TextEditingController(text: widget.controller.userName);
+  late final TextEditingController _address =
+      TextEditingController(text: '${widget.controller.settings['address_as'] ?? ''}');
+  late final TextEditingController _about =
+      TextEditingController(text: '${widget.controller.settings['about_me'] ?? ''}');
 
   @override
   void initState() {
@@ -27,6 +31,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _name.dispose();
+    _address.dispose();
+    _about.dispose();
     super.dispose();
   }
 
@@ -74,6 +80,90 @@ class _SettingsScreenState extends State<SettingsScreen> {
               language: '${s['language'] ?? 'auto'}',
               script: '${s['script'] ?? 'roman'}',
               onChanged: (language, script) => _save({'language': language, 'script': script}),
+            ),
+          ],
+        ),
+        _Section(
+          icon: Icons.favorite_rounded,
+          title: tr(c, 'Rishu ka andaaz', 'Rishu\'s style'),
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _PersonaCard(
+                    key: const ValueKey('persona-professional'),
+                    selected: s['persona'] != 'personal',
+                    icon: Icons.work_rounded,
+                    title: tr(c, 'Professional', 'Professional'),
+                    text: tr(c, 'Shaant, seedha aur saaf. College, class ya client ke saamne ke liye.',
+                        'Calm, direct and clear. For college, class or clients.'),
+                    sample: tr(c, '"Ho gaya. Attendance save kar di hai."', '"Done. The attendance is saved."'),
+                    onTap: () => _save({'persona': 'professional'}),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _PersonaCard(
+                    key: const ValueKey('persona-personal'),
+                    selected: s['persona'] == 'personal',
+                    icon: Icons.favorite_rounded,
+                    title: tr(c, 'Personal', 'Personal'),
+                    text: tr(c, 'Apnapan, pyaar aur thodi masti. Sirf aapke liye wala andaaz.',
+                        'Warm, caring and a little playful. Your own companion style.'),
+                    sample: tr(c, '"Ho gaya! Aaj bahut kaam kiya aapne, thoda aaram bhi kar lijiye."',
+                        '"Done! You worked a lot today, take a little rest too."'),
+                    onTap: () async {
+                      // The personal style speaks in a woman's voice by default (changeable below).
+                      await _save({'persona': 'personal', if (s['persona'] != 'personal') 'voice_gender': 'female'});
+                      c.speak(c.english
+                          ? 'Hi${c.userName.isEmpty ? '' : ' ${c.userName}'}! I am here for you, always.'
+                          : 'हाय${c.userName.isEmpty ? '' : ' ${c.userName}'}! मैं हूँ ना, आपके साथ।');
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const ValueKey('address-as'),
+                    controller: _address,
+                    maxLength: 40,
+                    decoration: InputDecoration(
+                      labelText: tr(c, 'Rishu aapko kya bulaye?', 'What should Rishu call you?'),
+                      hintText: tr(c, 'jaise: Sir, Neelesh ji', 'e.g. Sir, Neelesh'),
+                      counterText: '',
+                    ),
+                    onSubmitted: (v) => _save({'address_as': v}),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                FilledButton(onPressed: () => _save({'address_as': _address.text}), child: Text(tr(c, 'Save', 'Save'))),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const ValueKey('about-me'),
+              controller: _about,
+              maxLength: 600,
+              minLines: 2,
+              maxLines: 5,
+              decoration: InputDecoration(
+                labelText: tr(c, 'Apne baare mein aur baat karne ka tareeka', 'About you and how Rishu should talk'),
+                hintText: tr(c, 'jaise: Main GITM mein Assistant Professor hoon. Chhote jawab do. Subah 9 baje class hoti hai.',
+                    'e.g. I teach at GITM. Keep answers short. My classes start at 9.'),
+                alignLabelWithHint: true,
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.tonal(
+                key: const ValueKey('save-about-me'),
+                onPressed: () => _save({'about_me': _about.text}),
+                child: Text(tr(c, 'Yaad rakho', 'Save')),
+              ),
             ),
           ],
         ),
@@ -402,6 +492,66 @@ class _InfoRow extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(child: Text(text, style: const TextStyle(color: RishuColors.muted, fontSize: 13))),
       ],
+    );
+  }
+}
+
+
+class _PersonaCard extends StatelessWidget {
+  const _PersonaCard({
+    super.key,
+    required this.selected,
+    required this.icon,
+    required this.title,
+    required this.text,
+    required this.sample,
+    required this.onTap,
+  });
+  final bool selected;
+  final IconData icon;
+  final String title;
+  final String text;
+  final String sample;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = selected ? RishuColors.violet : RishuColors.border;
+    return Material(
+      color: selected ? RishuColors.violet.withValues(alpha: 0.12) : RishuColors.panelHigh,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: accent, width: selected ? 2 : 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: selected ? RishuColors.violet : RishuColors.muted),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(title,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: RishuColors.text)),
+                  ),
+                  if (selected) const Icon(Icons.check_circle_rounded, color: RishuColors.violet, size: 20),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(text, style: const TextStyle(color: RishuColors.muted, fontSize: 13)),
+              const SizedBox(height: 8),
+              Text(sample, style: const TextStyle(color: RishuColors.text, fontStyle: FontStyle.italic, fontSize: 13)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

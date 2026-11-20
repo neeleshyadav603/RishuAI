@@ -86,6 +86,7 @@ class CoreRuntime:
             home=self.home,
             transport=transport,
         )
+        self.voice.set_persona(self.public_settings()["persona"])
 
     # ---- settings ------------------------------------------------------
 
@@ -109,12 +110,17 @@ class CoreRuntime:
             "speak_replies": defaults.get("speak_replies") is not False,
             "voice_gender": defaults.get("voice_gender") or "male",
             "follow_up": defaults.get("follow_up") is True,
+            "persona": defaults.get("persona") or "professional",
+            "address_as": defaults.get("address_as") or "",
+            "about_me": defaults.get("about_me") or "",
         }
 
     def update_settings(self, patch: dict[str, Any]) -> dict[str, Any]:
         self.user.update(patch)
         self._changed()
-        return self.public_settings()
+        settings = self.public_settings()
+        self.voice.set_persona(settings["persona"])
+        return settings
 
     def server_option(self, key: str, default: float) -> float:
         return float(self.base_settings.defaults.get("server", {}).get(key, default))

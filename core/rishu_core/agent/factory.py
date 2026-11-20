@@ -21,11 +21,28 @@ _LANGUAGE_HINT = {
 }
 
 
+_SELF_FORMS = {
+    "female": "Your voice is a woman's voice: in Hindi speak about yourself in feminine forms "
+    "(main karti hoon, kar dungi, samajh gayi).",
+    "male": "Your voice is a man's voice: in Hindi speak about yourself in masculine forms "
+    "(main karta hoon, kar dunga, samajh gaya).",
+}
+
+
 def build_system_prompt(settings: Settings) -> str:
     defaults = settings.defaults
+    persona = (
+        defaults.get("persona")
+        if defaults.get("persona") in ("professional", "personal")
+        else "professional"
+    )
     context = [f"- Device: {platform.system() or 'unknown'} computer."]
     if defaults.get("user_name"):
         context.append(f"- The user's name is {defaults['user_name']}.")
+    if defaults.get("address_as"):
+        context.append(f'- Address the user as "{defaults["address_as"]}".')
+    gender = defaults.get("voice_gender") if defaults.get("voice_gender") in _SELF_FORMS else "male"
+    context.append(f"- {_SELF_FORMS[gender]}")
     language = defaults.get("language", "auto")
     if language in _LANGUAGE_HINT:
         context.append(f"- {_LANGUAGE_HINT[language]}")
@@ -37,13 +54,19 @@ def build_system_prompt(settings: Settings) -> str:
             "sentences. Avoid tables, long lists and symbols unless the user asks for "
             "detail; when teaching, explain step by step in small parts."
         )
-    return "\n\n".join(
-        [
-            read_prompt("persona_rishu", settings.root),
-            read_prompt("system_rules", settings.root),
-            "Context\n" + "\n".join(context),
-        ]
-    )
+    parts = [
+        read_prompt("persona_rishu", settings.root),
+        read_prompt(f"personas/{persona}", settings.root),
+        read_prompt("system_rules", settings.root),
+        "Context\n" + "\n".join(context),
+    ]
+    if defaults.get("about_me"):
+        # Written by the user in Settings (trusted, like the name).
+        parts.append(
+            "What the user wrote about themselves and how they like you to talk\n"
+            + defaults["about_me"]
+        )
+    return "\n\n".join(parts)
 
 
 def build_agent(

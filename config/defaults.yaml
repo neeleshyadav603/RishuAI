@@ -27,6 +27,13 @@ server:
 
 # Voice of Rishu's replies: male | female (the user can change it in the app).
 voice_gender: male
+# How Rishu talks: professional (default, fine in front of others) | personal
+# (warm, caring companion mode for the owner). Prompts: shared/prompts/personas/.
+persona: professional
+# How Rishu addresses the user ("Sir", "Neelesh ji", ...); empty = use the name.
+address_as: ""
+# Free text from the user about themselves and how they like Rishu to talk.
+about_me: ""
 
 voice:
   # Natural Microsoft neural voices through the free edge-tts package (online).
@@ -34,6 +41,8 @@ voice:
   # (offline) are always the fallback.
   edge_tts: true
   rate: "+5%"
+  # Speaking rate per persona (overrides `rate`): the personal style is a bit slower and softer.
+  persona_rate: {professional: "+5%", personal: "-2%"}
   edge_voices:
     male: {devanagari: hi-IN-MadhurNeural, latin: en-IN-PrabhatNeural}
     female: {devanagari: hi-IN-SwaraNeural, latin: en-IN-NeerjaNeural}

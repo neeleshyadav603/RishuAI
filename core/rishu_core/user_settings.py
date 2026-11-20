@@ -19,6 +19,7 @@ from .permissions import AUTONOMY_MODES
 LANGUAGES = ("auto", "hi", "en", "hinglish")
 SCRIPTS = ("roman", "devanagari")
 VOICE_GENDERS = ("male", "female")
+PERSONAS = ("professional", "personal")
 
 
 def _choice(options: tuple[str, ...]) -> Callable[[Any], str]:
@@ -40,6 +41,19 @@ def _name(value: Any) -> str:
     return cleaned
 
 
+def _short_text(limit: int) -> Callable[[Any], str]:
+    def check(value: Any) -> str:
+        if not isinstance(value, str):
+            raise ValueError("must be text")
+        # Printable text on one paragraph: it is placed in the system prompt.
+        cleaned = " ".join("".join(ch for ch in value if ch.isprintable() or ch == "\n").split())
+        if len(cleaned) > limit:
+            raise ValueError(f"must be {limit} characters or fewer")
+        return cleaned
+
+    return check
+
+
 def _flag(value: Any) -> bool:
     if not isinstance(value, bool):
         raise ValueError("must be true or false")
@@ -55,6 +69,9 @@ _FIELDS: dict[str, Callable[[Any], Any]] = {
     "speak_replies": _flag,
     "voice_gender": _choice(VOICE_GENDERS),
     "follow_up": _flag,
+    "persona": _choice(PERSONAS),
+    "address_as": _short_text(40),
+    "about_me": _short_text(600),
 }
 
 
