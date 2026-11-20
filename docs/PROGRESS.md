@@ -3,8 +3,86 @@
 Checkpoint file. Every session reads this first and updates it with every push.
 Rules for sessions are in `CLAUDE.md`.
 
-**Current phase:** 2 (App + Voice)
-**Last updated:** 2026-11-19 (showcase sprint: Windows app + voice)
+**Current phase:** Owner priorities of 2026-11-20 (see the next section; they come before the phase order)
+**Last updated:** 2026-11-20
+
+## Owner priorities (2026-11-20) — work in this order, before the phase order
+
+The owner tried v0.4.1 and asked (voice call, 20 Nov): Rishu must not refuse
+work it does not know; it should ask to be taught once and then do it. Most of
+his work is in the browser (college LMS "Lexyta", Google Sheets, Gmail) and in
+WhatsApp. Two personas, a small local model for low-end laptops, teacher tools
+and the Android app. Voice cloning is on hold. A new installer only when a
+group of items is done (not after every step).
+
+P1 — Personas and voice
+- [ ] Setting `persona`: `professional` (default) and `personal` (warm, caring,
+      a little playful, uses the owner's name; still honest that it is an AI,
+      nothing sexual, never guilt-trips or discourages time with people).
+      Prompts in `shared/prompts/personas/`; picker in Settings and onboarding.
+- [ ] Personalisation: how Rishu addresses the user ("Sir", name, …) and a free
+      "About me / how to talk to me" text added to the system prompt.
+- [ ] Natural Indian voice per persona (personal → female Swara/Neerja by
+      default, slightly slower and warmer rate); keep the male option.
+
+P2 — Browser control (Chrome DevTools Protocol, no new heavy dependency)
+- [ ] Start Chrome (or Edge) with remote debugging on Rishu's own profile folder;
+      the user signs in to sites once in that window (Rishu never stores passwords).
+- [ ] Tools: open a page, read the page as a structured outline (headings,
+      buttons, fields with labels, tables/lists with row text, each with a ref),
+      click, type, select, press keys, wait for text, screenshot to vision.
+      Page text is untrusted. Actions on signed-in sites are R2; "submit / lock /
+      send / delete" buttons always need explicit approval.
+
+P3 — Teach mode ("sikha do, main seekh loongi")
+- [ ] When no tool or skill fits, Rishu offers to learn instead of refusing.
+- [ ] Recorder: a script injected into Rishu's Chrome records clicks, typing and
+      navigation with robust targets (role + name, label, test id, text); the
+      user can speak notes while showing; "bas, ho gaya" stops.
+- [ ] Skill = description + steps + parameters (typed values become variables),
+      saved encrypted in the data folder; list / rename / delete in the app.
+- [ ] Replay with new values (the model fills the parameters), check each step,
+      ask when a step fails, "aise nahi, aise karo" re-records that step.
+
+P4 — Lexyta LMS (lms.lexyta.com) — page structure in `docs/lms/lexyta.md`
+- [ ] Built-in skill: mark attendance of a class meeting ("roll 5 aur 12
+      absent, baaki present"): search/paginate, set each status, then "Mark
+      remaining as present"; "Submit & lock attendance" only after approval.
+- [ ] Enter assignment / sessional marks — needs the gradebook pages (asked in
+      `docs/NEEDS_USER.md`).
+- [ ] Check Word submissions: suggest marks within the owner's range with a
+      one-line reason; one approval for the whole table, then enter.
+
+P5 — Sheets, Excel, CSV and register photos
+- [ ] Read and fill .xlsx/.csv (attendance, marks), fuzzy name matching
+      ("Aryan" ↔ "Aryan Kumar", roll numbers), preview table → approval → write.
+- [ ] Photo of a handwritten register → vision model → table → match → fill.
+- [ ] Google Sheets through the browser tools (P2).
+
+P6 — WhatsApp and email on command
+- [ ] WhatsApp Desktop: "Shruti ko bolo aaj nahi aa sakta" → open her chat by
+      name, write the message, read it out, send after "haan" (UI automation of
+      the official app; no unofficial APIs).
+- [ ] Gmail in Rishu's Chrome: read new mail aloud, reply / send after approval.
+- [ ] Spoken alert for incoming WhatsApp messages (Windows notifications) — research.
+
+P7 — Small local model (works on low-end laptops, no key, no limit)
+- [ ] llama.cpp server (MIT) shipped with Rishu; the smallest capable
+      Apache-2.0 instruct model downloaded once on first use; router uses it
+      offline or when every free key is exhausted. Model IDs in `config/models.yaml`.
+
+P8 — Teacher mode
+- [ ] Weekly timetable, "aaj kaunsi class hai", reminder before each lecture.
+- [ ] Notes, quiz, question paper and result sheet as Word/Excel files.
+
+P9 — Android app
+- [ ] Talk to Rishu, reminders, open apps, WhatsApp on the phone; send a command
+      to the laptop Rishu (LMS and other heavy work run on the laptop).
+
+P10 — Later
+- [ ] Dictation into any app, find/open/organise files, PDF/Word summaries,
+      morning briefing, meeting notes, LinkedIn drafts, freelancing helpers
+      (proposals, invoices, deadlines). Voice cloning: on hold (owner, 20 Nov).
 
 ## Phase 0 — Setup
 

@@ -98,6 +98,11 @@ Research → 5 Browser, Comms, Productivity → 6 Skills + Teach → 7 Android A
 Exception to the order: keep a buildable Windows installer and Android APK
 pipeline working from Phase 2 onward, so the two deliverables exist early.
 
+The "Owner priorities" section at the top of `docs/PROGRESS.md` (20 Nov 2026)
+comes before the phase order: work through it first, in its order.
+Personal data the owner shares (students' names, roll numbers, e-mails,
+phone numbers) never goes into the repo: keep only page structure.
+
 ## Code style
 
 Python 3.11+, typed, small modules, pytest for every tool, ruff clean.

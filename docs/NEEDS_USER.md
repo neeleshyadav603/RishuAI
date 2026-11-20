@@ -4,6 +4,20 @@ Yeh file sirf un cheezon ki list hai jo **sirf aap** kar sakte ho. Baaki kaam
 Rishu ki build apne aap chalti rehti hai. Abhi koi bhi cheez kaam ko rok nahi
 rahi hai: neeche wala kaam jab time mile tab kar dena.
 
+## 0. Lexyta ke 4 page dobara bhejo (marks wala kaam inke bina adhoora rahega)
+
+Aapne 10 page bheje the, unme se 6 mil gaye (sign-in, home, courses, course modules,
+meetings, attendance). Baaki 4 file **khaali (0 byte)** aayi, shayad upload beech mein
+ruk gaya. Ye page Chrome mein kholkar Ctrl+S → "Webpage, Single File" se save karke
+chat mein dobara bhejo:
+
+1. Class ka **Assignments** tab (assignments ki list)
+2. Kisi ek assignment ka **Gradebook** (jahan marks bharte ho)
+3. **Sessional** marks bharne wala page (agar alag hai)
+4. Kisi ek bachche ka **submission** (jahan uski Word file dikhti hai)
+
+Password wali screen mat bhejna.
+
 ## 1. Android APK ke liye signing key (5 minute, ek hi baar)
 
 **Kyun:** Abhi APK "debug key" se sign hoti hai, jo har build par badal jaati
