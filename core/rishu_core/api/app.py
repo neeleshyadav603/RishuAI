@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import hmac
 import json
+import threading
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -100,6 +101,28 @@ def create_app(runtime: CoreRuntime) -> FastAPI:
         runtime.lock.remove_phrase()
         runtime.lock_changed()
         return runtime.lock.status()
+
+    @app.get("/v1/local-model", dependencies=guard)
+    async def local_model_status() -> dict[str, Any]:
+        return runtime.local.status()
+
+    @app.post("/v1/local-model/download", dependencies=private)
+    async def local_model_download() -> dict[str, Any]:
+        status = runtime.local.status()
+        if not status["engine"]:
+            raise HTTPException(
+                status_code=409, detail="the offline model engine is not part of this build"
+            )
+        if status["progress"] is None and not status["downloaded"]:
+            threading.Thread(
+                target=runtime.local.download, name="rishu-model-download", daemon=True
+            ).start()
+        return runtime.local.status()
+
+    @app.delete("/v1/local-model", dependencies=private)
+    async def local_model_delete() -> dict[str, Any]:
+        await asyncio.to_thread(runtime.local.delete)
+        return runtime.local.status()
 
     @app.get("/v1/settings", dependencies=private)
     async def get_settings() -> dict[str, Any]:

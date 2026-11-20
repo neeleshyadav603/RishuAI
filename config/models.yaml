@@ -6,7 +6,7 @@
 #        coder (Self-Update Lab), vision (screenshots).
 # label and key_url are shown in the app's setup screen (where to get a free key).
 
-order: [groq, gemini, openrouter, ollama]
+order: [groq, gemini, openrouter, rishu_local, ollama]
 
 providers:
   groq:
@@ -42,6 +42,24 @@ providers:
       coder: []
       vision: []
 
+  # Rishu's own offline model (llama.cpp server shipped with Rishu, model file
+  # downloaded once from Settings). No key, no daily limit; slower, simpler.
+  rishu_local:
+    label: Rishu offline model
+    key_url: ""
+    base_url: http://127.0.0.1:1/v1  # replaced by the started server's address
+    local: true
+    managed: true
+    # Only these tools are offered to the small model (short prompt = fast on a CPU).
+    tools_allow: [get_time, open_app, open_url, play_youtube, browser_search, set_reminder, list_reminders,
+                  cancel_reminder, weather, add_note, list_notes, remember, list_memories, volume, battery_status,
+                  screenshot, lock_computer, whatsapp_send, whatsapp_draft, email_draft, list_skills]
+    models:
+      fast: []
+      smart: []
+      coder: []
+      vision: []
+
   # Local models through Ollama (desktop only). No key. When the lists are
   # empty the router uses whatever models Ollama reports as installed.
   ollama:
@@ -59,3 +77,20 @@ providers:
 speech:
   stt_provider: groq
   stt_models: [whisper-large-v3-turbo, whisper-large-v3]
+
+# Rishu's offline model files (Apache-2.0 Qwen3, GGUF from the ggml-org
+# repositories on Hugging Face; the exact file is looked up when downloading).
+local_model:
+  default: small
+  ctx_size: 4096
+  choices:
+    small:
+      label: "Chhota: Qwen3 0.6B (about 0.5 GB, 4 GB RAM laptops)"
+      repo: ggml-org/Qwen3-0.6B-GGUF
+      file_suffix: Q4_K_M.gguf
+      size_mb: 480
+    better:
+      label: "Behtar: Qwen3 1.7B (about 1.3 GB, 8 GB RAM)"
+      repo: ggml-org/Qwen3-1.7B-GGUF
+      file_suffix: Q4_K_M.gguf
+      size_mb: 1280

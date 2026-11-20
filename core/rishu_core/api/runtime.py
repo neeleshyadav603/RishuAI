@@ -19,6 +19,7 @@ from .. import __version__
 from ..agent import Agent, Approver, build_agent
 from ..config import Settings, data_dir
 from ..llm import AuthError, ChatModel, LLMError, LLMRouter, ProviderUnavailable, QuotaError
+from ..llm.local import LocalModel
 from ..llm.openai_compat import OpenAICompatClient
 from ..security import LockManager, SecretStore, WindowsHello, clean_secret, open_secret_store
 from ..tools import ToolRegistry, build_registry
@@ -47,6 +48,7 @@ class CoreRuntime:
         env: Mapping[str, str] | None = None,
         voice: VoiceEngine | None = None,
         lock: LockManager | None = None,
+        local_model: LocalModel | None = None,
     ):
         if len(token) < MIN_TOKEN_LENGTH:
             raise ValueError("the session token is too short")
@@ -87,6 +89,8 @@ class CoreRuntime:
             transport=transport,
         )
         self.voice.set_persona(self.public_settings()["persona"])
+        self.local = local_model or LocalModel(self.home, settings.models.get("local_model") or {})
+        self.local.choice = self.public_settings()["local_model"] or self.local.choice
 
     # ---- settings ------------------------------------------------------
 
@@ -113,6 +117,7 @@ class CoreRuntime:
             "persona": defaults.get("persona") or "professional",
             "address_as": defaults.get("address_as") or "",
             "about_me": defaults.get("about_me") or "",
+            "local_model": defaults.get("local_model") or "",
         }
 
     def update_settings(self, patch: dict[str, Any]) -> dict[str, Any]:
@@ -120,6 +125,8 @@ class CoreRuntime:
         self._changed()
         settings = self.public_settings()
         self.voice.set_persona(settings["persona"])
+        if settings["local_model"]:
+            self.local.choose(settings["local_model"])
         return settings
 
     def server_option(self, key: str, default: float) -> float:
@@ -173,8 +180,8 @@ class CoreRuntime:
         models_cfg = self.base_settings.models
         for name in models_cfg.get("order", []):
             cfg = models_cfg.get("providers", {}).get(name)
-            if not cfg:
-                continue
+            if not cfg or cfg.get("managed"):
+                continue  # the offline model has its own section (local_model)
             local = bool(cfg.get("local"))
             _, source = self._key_for(cfg)
             result.append(
@@ -242,7 +249,10 @@ class CoreRuntime:
         with self._lock:
             if self._router is None or self._router_generation != self.generation:
                 self._router = LLMRouter.from_settings(
-                    self.base_settings.models, env=self.provider_env(), transport=self._transport
+                    self.base_settings.models,
+                    env=self.provider_env(),
+                    transport=self._transport,
+                    managed={"rishu_local": self.local.ensure},
                 )
                 self._router_generation = self.generation
             return self._router if self._router.providers else None
@@ -356,6 +366,7 @@ class CoreRuntime:
         teach = getattr(self.registry, "teach", None)
         if teach is not None:
             teach.listeners[:] = [session.send_event]
+        self.local.listeners[:] = [session.send_event]
 
     def detach(self, session: Any) -> None:
         if getattr(self, "active_session", None) is session:
@@ -363,6 +374,7 @@ class CoreRuntime:
             teach = getattr(self.registry, "teach", None)
             if teach is not None:
                 teach.listeners[:] = []
+            self.local.listeners[:] = []
 
     def hotkey_pressed(self) -> None:
         """Ctrl+Shift+Space anywhere in Windows: talk to Rishu."""
@@ -385,6 +397,7 @@ class CoreRuntime:
             "providers": self.providers(),
             "lock": self.lock.status(),
             "teach": self._teach_state(),
+            "local_model": {k: v for k, v in self.local.status().items() if k != "type"},
             "capabilities": {
                 "step_up": self.lock.step_up_ready(),  # PIN + Windows Hello for R3
                 "secure_store": self.secrets.kind,

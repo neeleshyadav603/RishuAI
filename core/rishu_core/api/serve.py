@@ -164,6 +164,7 @@ def serve(
 
         def parent_exited() -> None:
             server.should_exit = True
+            runtime.local.stop()
             time.sleep(3.0)
             os._exit(0)
 
@@ -174,6 +175,7 @@ def serve(
 
         def parent_gone() -> None:
             server.should_exit = True
+            runtime.local.stop()
             time.sleep(3.0)
             os._exit(0)  # a turn stuck in a network call must not keep the core alive
 
@@ -181,5 +183,8 @@ def serve(
             target=_watch_parent, args=(sys.stdin.buffer, parent_gone), daemon=True
         ).start()
 
-    server.run(sockets=[sock])
+    try:
+        server.run(sockets=[sock])
+    finally:
+        runtime.local.stop()  # never leave the offline model engine running
     return 0

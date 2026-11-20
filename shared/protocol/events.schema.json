@@ -116,6 +116,9 @@
     },
     {
       "$ref": "#/$defs/forget_skill"
+    },
+    {
+      "$ref": "#/$defs/local_model"
     }
   ],
   "$defs": {
@@ -570,6 +573,9 @@
             "about_me": {
               "type": "string",
               "maxLength": 600
+            },
+            "local_model": {
+              "type": "string"
             }
           },
           "required": [
@@ -672,6 +678,38 @@
                   }
                 }
               }
+            }
+          }
+        },
+        "local_model": {
+          "type": "object",
+          "properties": {
+            "engine": {
+              "type": "boolean"
+            },
+            "choice": {
+              "type": "string"
+            },
+            "choices": {
+              "type": "object"
+            },
+            "downloaded": {
+              "type": "boolean"
+            },
+            "size_mb": {
+              "type": "number"
+            },
+            "running": {
+              "type": "boolean"
+            },
+            "progress": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "error": {
+              "type": "string"
             }
           }
         }
@@ -909,6 +947,44 @@
       },
       "required": [
         "name"
+      ]
+    },
+    "local_model": {
+      "description": "c2a. Rishu's offline model: engine bundled, file downloaded, download progress, running.",
+      "properties": {
+        "type": {
+          "const": "local_model"
+        },
+        "engine": {
+          "type": "boolean"
+        },
+        "choice": {
+          "type": "string"
+        },
+        "choices": {
+          "type": "object"
+        },
+        "downloaded": {
+          "type": "boolean"
+        },
+        "size_mb": {
+          "type": "number"
+        },
+        "running": {
+          "type": "boolean"
+        },
+        "progress": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "downloaded"
       ]
     }
   }

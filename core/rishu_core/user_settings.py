@@ -72,6 +72,7 @@ _FIELDS: dict[str, Callable[[Any], Any]] = {
     "persona": _choice(PERSONAS),
     "address_as": _short_text(40),
     "about_me": _short_text(600),
+    "local_model": _choice(("small", "better")),
 }
 
 

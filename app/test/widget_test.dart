@@ -146,6 +146,19 @@ void main() {
     expect(core.sent.last, {'type': 'forget_skill', 'name': 'LMS marks'});
   });
 
+  test('offline model: status from hello and events, download request', () async {
+    final (c, core) = await started();
+    core.controller.add({'v': 1, 'type': 'local_model', 'engine': true, 'choice': 'small',
+        'choices': {'small': 'Chhota', 'better': 'Behtar'}, 'downloaded': false, 'size_mb': 480,
+        'running': false, 'progress': {'done': 240, 'total': 480}, 'error': ''});
+    await Future<void>.delayed(Duration.zero);
+    expect(c.localModel.downloading, isTrue);
+    expect(c.localModel.fraction, 0.5);
+    expect(c.localModel.choices.keys, ['small', 'better']);
+    await c.downloadLocalModel();
+    expect(core.requests.last, 'POST /v1/local-model/download');
+  });
+
   test('voice: listen, transcript, level and stop', () async {
     final (c, core) = await started();
     c.toggleListening();

@@ -461,6 +461,7 @@ def test_settings_round_trip_and_validation(settings, registry, tmp_path):
         "persona": "professional",
         "address_as": "",
         "about_me": "",
+        "local_model": "",
         "autonomy": "smart",
     }
     changed = client.put(

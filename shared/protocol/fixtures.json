@@ -372,5 +372,25 @@
       "type": "forget_skill",
       "name": "LMS marks"
     }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "local_model",
+      "engine": true,
+      "choice": "small",
+      "choices": {
+        "small": "Chhota"
+      },
+      "downloaded": false,
+      "size_mb": 480,
+      "running": false,
+      "progress": {
+        "done": 1000,
+        "total": 480000000
+      },
+      "error": ""
+    }
   }
 ]

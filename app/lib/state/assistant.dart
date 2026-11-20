@@ -164,6 +164,34 @@ class TeachInfo {
   final List<({String name, String description, int steps})> skills;
 }
 
+/// Rishu's offline model: engine bundled, file downloaded, progress.
+class LocalModelInfo {
+  LocalModelInfo([Map<String, dynamic>? e])
+      : engine = e?['engine'] == true,
+        choice = '${e?['choice'] ?? 'small'}',
+        choices = {
+          for (final entry in ((e?['choices'] as Map?) ?? const {}).entries) '${entry.key}': '${entry.value}'
+        },
+        downloaded = e?['downloaded'] == true,
+        sizeMb = ((e?['size_mb'] as num?) ?? 0).toInt(),
+        running = e?['running'] == true,
+        done = (((e?['progress'] as Map?)?['done'] as num?) ?? 0).toInt(),
+        total = (((e?['progress'] as Map?)?['total'] as num?) ?? 0).toInt(),
+        downloading = e?['progress'] is Map,
+        error = '${e?['error'] ?? ''}';
+  final bool engine;
+  final String choice;
+  final Map<String, String> choices;
+  final bool downloaded;
+  final int sizeMb;
+  final bool running;
+  final bool downloading;
+  final int done;
+  final int total;
+  final String error;
+  double get fraction => total > 0 ? done / total : 0;
+}
+
 typedef Connector = Future<CoreConnection> Function();
 
 Future<CoreConnection> connectToBundledCore() async {
@@ -194,6 +222,7 @@ class AssistantController extends ChangeNotifier {
   VoiceCaps voice = VoiceCaps();
   LockInfo lock = LockInfo();
   TeachInfo teach = TeachInfo();
+  LocalModelInfo localModel = LocalModelInfo();
   String lockError = '';
   double approvalTimeout = 120;
   bool disconnected = false;
@@ -296,6 +325,8 @@ class AssistantController extends ChangeNotifier {
         _lockState(e);
       case 'teach_state':
         teach = TeachInfo(e);
+      case 'local_model':
+        localModel = LocalModelInfo(e);
       case 'error':
         final code = '${e['code'] ?? ''}';
         if (locked && (code == 'locked' || code.startsWith('unlock_') || code.startsWith('voice_'))) {
@@ -320,6 +351,7 @@ class AssistantController extends ChangeNotifier {
     approvalTimeout = ((caps['approval_timeout_seconds'] as num?) ?? 120).toDouble();
     lock = LockInfo(e['lock'] is Map ? Map<String, dynamic>.from(e['lock'] as Map) : null);
     teach = TeachInfo(e['teach'] is Map ? Map<String, dynamic>.from(e['teach'] as Map) : null);
+    localModel = LocalModelInfo(e['local_model'] is Map ? Map<String, dynamic>.from(e['local_model'] as Map) : null);
     disconnected = false;
     mood = OrbMood.idle;
     final firstRun = !hasBrain && userName.isEmpty && !_skippedSetup;
@@ -539,6 +571,24 @@ class AssistantController extends ChangeNotifier {
   void teachCancel() => _core?.send({'type': 'teach_cancel'});
 
   void forgetSkill(String name) => _core?.send({'type': 'forget_skill', 'name': name});
+
+  // ---- offline model -----------------------------------------------------------
+
+  Future<void> downloadLocalModel() async {
+    localModel = LocalModelInfo(await _req('POST', '/v1/local-model/download'));
+    notifyListeners();
+  }
+
+  Future<void> deleteLocalModel() async {
+    localModel = LocalModelInfo(await _req('DELETE', '/v1/local-model'));
+    notifyListeners();
+  }
+
+  Future<void> chooseLocalModel(String choice) async {
+    await updateSettings({'local_model': choice});
+    localModel = LocalModelInfo(await _req('GET', '/v1/local-model'));
+    notifyListeners();
+  }
 
   // ---- lock ------------------------------------------------------------------
 

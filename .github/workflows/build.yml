@@ -139,6 +139,24 @@ jobs:
             --collect-all edge_tts --collect-submodules aiohttp --collect-data certifi \
             --collect-all sounddevice --collect-all _sounddevice_data \
             core/run_core.py
+      - name: Bundle the offline model engine (llama.cpp server, MIT)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The CPU build of llama.cpp's server; the model file is downloaded
+          # later by the user from Settings (it is not in the installer).
+          mkdir -p llama dist/rishu-core/local-llm
+          if gh release download --repo ggml-org/llama.cpp --pattern "*bin-win-cpu-x64.zip" --dir llama; then
+            unzip -q -o llama/*.zip -d llama/unzipped
+            server=$(find llama/unzipped -name llama-server.exe | head -1)
+            cp "$(dirname "$server")"/*.dll "$server" dist/rishu-core/local-llm/
+            gh api repos/ggml-org/llama.cpp/contents/LICENSE --jq .content | base64 -d > dist/rishu-core/local-llm/LICENSE-llama.cpp.txt
+            ls -la dist/rishu-core/local-llm
+            dist/rishu-core/local-llm/llama-server.exe --version || true
+          else
+            echo "::warning::llama.cpp server could not be downloaded; this build has no offline model engine"
+          fi
       - name: Smoke-test the packaged core
         env:
           RISHU_HOME: ${{ runner.temp }}/rishu-home

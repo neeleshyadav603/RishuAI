@@ -62,14 +62,21 @@ class LLMRouter:
         models_cfg: Mapping[str, Any],
         env: Mapping[str, str] | None = None,
         transport: httpx.BaseTransport | None = None,
+        managed: Mapping[str, Callable[[], str | None]] | None = None,
         **kwargs: Any,
     ) -> LLMRouter:
-        """Build from ``config/models.yaml``. Cloud providers without a key are skipped."""
+        """Build from ``config/models.yaml``. Cloud providers without a key are skipped.
+
+        ``managed`` maps a provider that Rishu starts itself (its offline model)
+        to a function that starts it and returns its base URL, or None.
+        """
         env = os.environ if env is None else env
         providers = []
         for name in models_cfg.get("order", []):
             cfg = models_cfg.get("providers", {}).get(name)
             if not cfg:
+                continue
+            if cfg.get("managed") and not (managed and name in managed):
                 continue
             local = bool(cfg.get("local"))
             key = env.get(cfg.get("api_key_env", ""), "") if cfg.get("api_key_env") else ""
@@ -77,8 +84,30 @@ class LLMRouter:
                 continue
             client = OpenAICompatClient(name, cfg["base_url"], key or None, transport=transport)
             models = {role: list(cfg.get("models", {}).get(role) or []) for role in ROLES}
-            providers.append(ProviderState(name=name, client=client, models=models, local=local))
+            state = ProviderState(name=name, client=client, models=models, local=local)
+            if cfg.get("tools_allow"):
+                state.extra["tools_allow"] = set(cfg["tools_allow"])
+            if cfg.get("managed") and managed:
+                state.extra["ensure"] = managed[name]
+                state.extra["transport"] = transport
+            providers.append(state)
         return cls(providers, **kwargs)
+
+    def _ready(self, state: ProviderState) -> str:
+        """Start a managed provider if needed. Returns a reason when it cannot be used."""
+        ensure = state.extra.get("ensure")
+        if ensure is None:
+            return ""
+        url = ensure()
+        if not url:
+            return f"{state.name}: offline model not downloaded or not available"
+        if state.extra.get("url") != url:
+            state.client = OpenAICompatClient(
+                state.name, url, None, transport=state.extra.get("transport")
+            )
+            state.extra["url"] = url
+            state.discovery_tried, state.discovered = False, None
+        return ""
 
     def has_cloud_provider(self) -> bool:
         return any(not p.local for p in self.providers)
@@ -133,6 +162,10 @@ class LLMRouter:
             if state.cooldown_until > self._clock():
                 reasons.append(state.cooldown_reason or f"{state.name}: cooling down")
                 continue
+            problem = self._ready(state)
+            if problem:
+                reasons.append(problem)
+                continue
             models = self.candidates(state, role)
             if state.cooldown_until > self._clock():  # discovery just failed
                 reasons.append(state.cooldown_reason)
@@ -141,9 +174,15 @@ class LLMRouter:
                 reasons.append(f"{state.name}: no model configured for '{role}'")
                 continue
             quota_hits = 0
+            offered = tools
+            allow = state.extra.get("tools_allow")
+            if tools and allow:
+                # Small local models get only the everyday tools: a short prompt is
+                # much faster on a laptop CPU and easier for them to use well.
+                offered = [t for t in tools if t.get("function", {}).get("name") in allow] or None
             for model in models:
                 try:
-                    response = state.client.chat(model, messages, tools, stream=stream)
+                    response = state.client.chat(model, messages, offered, stream=stream)
                 except LLMError as exc:
                     # A failed attempt may have streamed part of a reply: discard
                     # it before the next model or provider starts again.

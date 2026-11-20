@@ -110,9 +110,18 @@ P6 — WhatsApp and email on command
       reads unread chats on request from WhatsApp Web in its own browser.
 
 P7 — Small local model (works on low-end laptops, no key, no limit)
-- [ ] llama.cpp server (MIT) shipped with Rishu; the smallest capable
+- [x] llama.cpp server (MIT) shipped with Rishu; the smallest capable
       Apache-2.0 instruct model downloaded once on first use; router uses it
       offline or when every free key is exhausted. Model IDs in `config/models.yaml`.
+      Done: the Windows build bundles llama.cpp's CPU `llama-server.exe` (latest
+      release, with its licence) in `core/local-llm`; `llm/local.py` downloads
+      the chosen Qwen3 GGUF (0.6B ≈0.5 GB default, 1.7B ≈1.3 GB) from the
+      ggml-org Hugging Face repos with progress, size and SHA-256 checks,
+      starts the server on first use (127.0.0.1, `--jinja`, thinking off) and
+      stops it with the core; the router tries it after the free keys and
+      offers it only the everyday tools (`tools_allow`) so a CPU stays fast.
+      Settings → Offline dimaag (choose, download with progress, delete).
+      Needs device test: real download and speed on a 4–8 GB laptop.
 
 P8 — Teacher mode
 - [ ] Weekly timetable, "aaj kaunsi class hai", reminder before each lecture.
