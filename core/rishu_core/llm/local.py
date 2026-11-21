@@ -25,6 +25,24 @@ import httpx
 
 CREATE_NO_WINDOW = 0x08000000
 HF = "https://huggingface.co"
+# Quantisations in order of preference: small and good enough on a basic laptop.
+# A model repo does not always publish every one, so the first one present wins.
+QUANTS = ("Q4_K_M", "Q4_K_S", "Q4_0", "Q5_K_M", "Q5_0", "Q6_K", "Q8_0")
+
+
+def quant_order(spec: Mapping[str, Any]) -> list[str]:
+    first = str(spec.get("file_suffix", "")).removesuffix(".gguf")
+    return [q for q in (first, *QUANTS) if q]
+
+
+def pick_file(names: list[str], spec: Mapping[str, Any]) -> str | None:
+    """The preferred .gguf file among a repo's files (never a vision projector)."""
+    files = [n for n in names if n.lower().endswith(".gguf") and "mmproj" not in n.lower()]
+    for quant in quant_order(spec):
+        for name in files:
+            if name.lower().removesuffix(".gguf").endswith(quant.lower()):
+                return name
+    return None
 
 
 def bundled_server() -> Path | None:
@@ -96,14 +114,14 @@ class LocalModel:
     def model_path(self) -> Path | None:
         """The chosen model: downloaded by the user, or shipped with Rishu."""
         spec = self._spec()
-        prefix = str(spec.get("repo", "")).split("/")[-1].removesuffix("-GGUF")
-        suffix = str(spec.get("file_suffix", ".gguf"))
+        prefix = str(spec.get("repo", "")).split("/")[-1].removesuffix("-GGUF").lower()
         for folder in (self.folder, self.bundled_folder()):
             if folder is None or not folder.is_dir():
                 continue
-            for path in sorted(folder.glob("*.gguf")):
-                if path.name.startswith(prefix) and path.name.endswith(suffix):
-                    return path
+            mine = [p.name for p in sorted(folder.glob("*.gguf")) if p.name.lower().startswith(prefix)]
+            name = pick_file(mine, spec)
+            if name:
+                return folder / name
         return None
 
     def is_bundled(self, path: Path | None) -> bool:
@@ -141,19 +159,16 @@ class LocalModel:
     def _resolve(self) -> tuple[str, int, str]:
         """(file name, size, sha256) of the chosen quantisation, from the Hugging Face API."""
         spec = self._spec()
-        repo, suffix = spec["repo"], spec.get("file_suffix", "Q4_K_M.gguf")
+        repo = spec["repo"]
         info = self._http.get(f"{HF}/api/models/{repo}", params={"blobs": "true"})
         info.raise_for_status()
-        for sibling in info.json().get("siblings", []):
-            name = sibling.get("rfilename", "")
-            if name.endswith(suffix):
-                lfs = sibling.get("lfs") or {}
-                return (
-                    name,
-                    int(lfs.get("size") or sibling.get("size") or 0),
-                    str(lfs.get("sha256", "")),
-                )
-        raise RuntimeError(f"no {suffix} file in {repo}")
+        siblings = [s for s in info.json().get("siblings", []) if isinstance(s, dict)]
+        name = pick_file([str(s.get("rfilename", "")) for s in siblings], spec)
+        if name is None:
+            raise RuntimeError(f"no usable .gguf file in {repo}")
+        sibling = next(s for s in siblings if s.get("rfilename") == name)
+        lfs = sibling.get("lfs") or {}
+        return name, int(lfs.get("size") or sibling.get("size") or 0), str(lfs.get("sha256", ""))
 
     def download(self) -> bool:
         """Blocking. Progress goes to the listeners; the file is checked (size and SHA-256)."""

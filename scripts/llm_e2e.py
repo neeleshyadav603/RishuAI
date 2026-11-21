@@ -16,14 +16,13 @@ import threading
 import time
 from pathlib import Path
 
-from websockets.sync.client import connect
-
 from rishu_core.api.runtime import CoreRuntime
 from rishu_core.api.serve import HOST, bind_socket, build_server
 from rishu_core.config import load_settings
 from rishu_core.security import MemoryStore
 from rishu_core.voice import VoiceEngine
 from rishu_core.voice.player import NullPlayer
+from websockets.sync.client import connect
 
 
 def run_turn(ws, text: str, timeout: float = 240) -> list[dict]:

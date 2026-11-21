@@ -175,9 +175,13 @@ jobs:
         shell: bash
         run: |
           # Rishu works from the first start without internet or a key.
-          python scripts/fetch_model.py --choice small --out dist/rishu-core/local-llm/models \
-            || echo "::warning::the offline model could not be downloaded; the user can download it in Settings"
-          ls -la dist/rishu-core/local-llm/models || true
+          # The installer must carry it: try three times, then fail the build.
+          for attempt in 1 2 3; do
+            python scripts/fetch_model.py --choice small --out dist/rishu-core/local-llm/models && break
+            if [ "$attempt" = 3 ]; then echo "::error::the offline model could not be downloaded"; exit 1; fi
+            sleep 20
+          done
+          ls -la dist/rishu-core/local-llm/models
       - name: Smoke-test the packaged core
         env:
           RISHU_HOME: ${{ runner.temp }}/rishu-home

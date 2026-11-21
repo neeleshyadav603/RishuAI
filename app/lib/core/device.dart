@@ -1,4 +1,5 @@
-// Phone-side helpers (Android): speech in and out, storage folder, Wi-Fi lock.
+// Phone-side helpers (Android): speech in and out, storage folder, Wi-Fi lock,
+// encrypted key storage and phone actions (alarm, timer, apps, links, dialer, contacts).
 // Implemented in MainActivity.kt without extra packages.
 import 'package:flutter/services.dart';
 
@@ -40,5 +41,60 @@ class PhoneDevice {
     try {
       await _channel.invokeMethod('stopSpeaking');
     } catch (_) {}
+  }
+
+  // ---- secrets (Android Keystore) ----------------------------------------------
+
+  static Future<void> saveSecret(String name, String value) async {
+    await _channel.invokeMethod('saveSecret', {'name': name, 'value': value});
+  }
+
+  static Future<String?> readSecret(String name) async {
+    try {
+      return await _channel.invokeMethod<String>('readSecret', {'name': name});
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> deleteSecret(String name) async {
+    await _channel.invokeMethod('deleteSecret', {'name': name});
+  }
+
+  // ---- phone actions ---------------------------------------------------------------
+
+  static Future<bool> _ok(String method, [Map<String, Object?>? args]) async {
+    try {
+      return (await _channel.invokeMethod<bool>(method, args)) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> setAlarm(int hour, int minute, String label) =>
+      _ok('setAlarm', {'hour': hour, 'minute': minute, 'label': label});
+
+  static Future<bool> setTimer(int seconds, String label) => _ok('setTimer', {'seconds': seconds, 'label': label});
+
+  static Future<bool> openUrl(String url) => _ok('openUrl', {'url': url});
+
+  static Future<bool> dial(String number) => _ok('dial', {'number': number});
+
+  static Future<bool> openApp(String package) => _ok('openApp', {'package': package});
+
+  static Future<List<Map<String, String>>> apps() async {
+    final raw = await _channel.invokeMethod<List<Object?>>('apps') ?? const [];
+    return [
+      for (final a in raw)
+        if (a is Map) {'label': '${a['label'] ?? ''}', 'package': '${a['package'] ?? ''}'}
+    ];
+  }
+
+  static Future<List<Map<String, String>>> findContact(String name) async {
+    final raw = await _channel.invokeMethod<List<Object?>>('findContact', {'name': name}) ?? const [];
+    return [
+      for (final c in raw)
+        if (c is Map) {'name': '${c['name'] ?? ''}', 'number': '${c['number'] ?? ''}'}
+    ];
   }
 }

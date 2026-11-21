@@ -34,15 +34,62 @@ class _PhoneLinkSettingsState extends State<PhoneLinkSettings> {
   Widget build(BuildContext context) {
     const muted = TextStyle(color: RishuColors.muted, fontSize: 13);
     if (c.onPhone) {
-      return Row(
+      if (c.onPhoneBrain) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.phone_android_rounded, color: RishuColors.cyan),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                      tr(c, 'Rishu abhi phone par khud chal rahi hai (online AI: Groq etc.).',
+                          'Rishu is running on the phone itself (online AI: Groq etc.).'),
+                      style: const TextStyle(color: RishuColors.text)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              tr(c, 'LMS, Excel/Word, WhatsApp Desktop aur teach mode laptop par hote hain. Laptop jodne se phone se bhi ho jayenge.',
+                  'LMS, Excel/Word, WhatsApp Desktop and teach mode run on the laptop. Pair it to use them from the phone.'),
+              style: muted,
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const ValueKey('pair-laptop-button'),
+              onPressed: () => _run(c.unpairLaptop),
+              icon: const Icon(Icons.laptop_windows_rounded),
+              label: Text(tr(c, 'Laptop se jodo', 'Pair with the laptop')),
+            ),
+          ],
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.laptop_windows_rounded, color: RishuColors.cyan),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(tr(c, 'Yeh phone laptop wale Rishu se juda hai.', 'This phone is connected to Rishu on the laptop.'),
-                style: const TextStyle(color: RishuColors.text)),
+          Row(
+            children: [
+              const Icon(Icons.laptop_windows_rounded, color: RishuColors.cyan),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(tr(c, 'Yeh phone laptop wale Rishu se juda hai.', 'This phone is connected to Rishu on the laptop.'),
+                    style: const TextStyle(color: RishuColors.text)),
+              ),
+              TextButton(onPressed: () => _run(c.unpairLaptop), child: Text(tr(c, 'Alag karo', 'Disconnect'))),
+            ],
           ),
-          TextButton(onPressed: () => _run(c.unpairLaptop), child: Text(tr(c, 'Alag karo', 'Disconnect'))),
+          Text(
+            tr(c, 'Laptop band ho ya door ho to phone apne online dimaag (Groq key) se chalega.',
+                'When the laptop is off or away, the phone uses its own online brain (Groq key).'),
+            style: muted,
+          ),
+          TextButton.icon(
+            onPressed: () => _run(() => c.setPhoneMode('phone')),
+            icon: const Icon(Icons.phone_android_rounded),
+            label: Text(tr(c, 'Abhi phone par hi chalao', 'Use the phone brain now')),
+          ),
         ],
       );
     }

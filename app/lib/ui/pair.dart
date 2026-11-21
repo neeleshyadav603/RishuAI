@@ -178,6 +178,13 @@ class _PairScreenState extends State<PairScreen> {
                         : const Icon(Icons.link_rounded),
                     label: Text(tr(c, 'Jodo', 'Connect')),
                   ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    key: const ValueKey('phone-brain-button'),
+                    onPressed: _busy ? null : () => c.setPhoneMode('phone'),
+                    icon: const Icon(Icons.phone_android_rounded),
+                    label: Text(tr(c, 'Laptop ke bina chalao (free Groq key se)', 'Use without the laptop (free Groq key)')),
+                  ),
                   const SizedBox(height: 14),
                   Text(
                     tr(c, 'Connection encrypted rehta hai. Phone se boli baat laptop wala Rishu karta hai: LMS, sheets, WhatsApp Desktop sab.',

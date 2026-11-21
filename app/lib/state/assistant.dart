@@ -1,11 +1,14 @@
 // App state: the conversation, the orb, settings, and every event from the core.
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 import '../core/connection.dart';
 import '../core/device.dart';
+import '../core/phone_core.dart';
 import '../core/remote.dart';
 
 enum Phase { booting, failed, onboarding, ready, pairing }
@@ -217,11 +220,75 @@ class PhoneLinkInfo {
 
 typedef Connector = Future<CoreConnection> Function();
 
-/// Android: the paired laptop's Rishu over the home Wi-Fi.
+/// Android keys: the Keystore through the platform channel.
+class _KeystoreSecrets implements SecretStore {
+  @override
+  Future<String?> read(String name) => PhoneDevice.readSecret(name);
+  @override
+  Future<void> save(String name, String value) => PhoneDevice.saveSecret(name, value);
+  @override
+  Future<void> delete(String name) => PhoneDevice.deleteSecret(name);
+}
+
+class _AndroidActions implements PhoneActions {
+  @override
+  Future<bool> setAlarm(int hour, int minute, String label) => PhoneDevice.setAlarm(hour, minute, label);
+  @override
+  Future<bool> setTimer(int seconds, String label) => PhoneDevice.setTimer(seconds, label);
+  @override
+  Future<bool> openUrl(String url) => PhoneDevice.openUrl(url);
+  @override
+  Future<bool> dial(String number) => PhoneDevice.dial(number);
+  @override
+  Future<List<Map<String, String>>> apps() => PhoneDevice.apps();
+  @override
+  Future<bool> openApp(String package) => PhoneDevice.openApp(package);
+  @override
+  Future<List<Map<String, String>>> findContact(String name) => PhoneDevice.findContact(name);
+}
+
+/// Which Rishu the phone uses: 'laptop' (paired laptop) or 'phone' (its own online brain).
+class PhoneMode {
+  PhoneMode(this.folder);
+  final Directory folder;
+  File get _file => File('${folder.path}${Platform.pathSeparator}rishu_mode.txt');
+  String get value {
+    try {
+      return _file.readAsStringSync().trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  set value(String mode) {
+    folder.createSync(recursive: true);
+    _file.writeAsStringSync(mode);
+  }
+}
+
+Future<CoreConnection> openPhoneCore() async {
+  final folder = Directory(await PhoneDevice.filesDir());
+  final brain = jsonDecode(await rootBundle.loadString('assets/brain.json')) as Map<String, dynamic>;
+  return PhoneCore(brain: brain, folder: Directory('${folder.path}${Platform.pathSeparator}phone'), secrets: _KeystoreSecrets(), actions: _AndroidActions());
+}
+
+/// Android: the paired laptop's Rishu over the home Wi-Fi, or the phone's own
+/// online brain (Groq etc.) when the user chose it or the laptop is away.
 Future<CoreConnection> connectToPairedLaptop() async {
-  final endpoint = PairingStore(Directory(await PhoneDevice.filesDir())).load();
-  if (endpoint == null) throw NeedsPairing();
-  return RemoteConnection.open(endpoint);
+  final folder = Directory(await PhoneDevice.filesDir());
+  final endpoint = PairingStore(folder).load();
+  final mode = PhoneMode(folder).value;
+  if (endpoint == null || mode == 'phone') {
+    if (mode == 'phone' || mode == 'auto') return openPhoneCore();
+    throw NeedsPairing();
+  }
+  try {
+    return await RemoteConnection.open(endpoint);
+  } catch (e) {
+    // The laptop is off or on another network: keep working on the phone.
+    if (mode == 'auto') return openPhoneCore();
+    rethrow;
+  }
 }
 
 Future<CoreConnection> connectToBundledCore() async {
@@ -408,7 +475,7 @@ class AssistantController extends ChangeNotifier {
     final text = english
         ? '${hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'}$name! I am Rishu. How can I help?'
         : '${hour < 12 ? 'सुप्रभात' : hour < 17 ? 'नमस्ते' : 'शुभ संध्या'}$name! मैं रिशु हूँ। बताइए, क्या करना है?';
-    _core?.send({'type': 'speak', 'text': text});
+    speak(text);
   }
 
   void _lockState(Map<String, dynamic> e) {
@@ -584,12 +651,28 @@ class AssistantController extends ChangeNotifier {
   Future<void> pairLaptop(String host, int port, String code) async {
     final device = await PhoneDevice.deviceName();
     final endpoint = await pairWithLaptop(host, port, code, device);
-    PairingStore(Directory(await PhoneDevice.filesDir())).save(endpoint);
-    await boot();
+    final folder = Directory(await PhoneDevice.filesDir());
+    PairingStore(folder).save(endpoint);
+    // Laptop when it is reachable; the phone's own brain when it is not.
+    PhoneMode(folder).value = 'auto';
+    await restart();
   }
 
+  /// Android: use the phone's own online brain ('phone'), the laptop only
+  /// ('laptop'), or the laptop when it is reachable and the phone otherwise ('auto').
+  Future<void> setPhoneMode(String mode) async {
+    PhoneMode(Directory(await PhoneDevice.filesDir())).value = mode;
+    await restart();
+  }
+
+  Future<String> phoneMode() async => PhoneMode(Directory(await PhoneDevice.filesDir())).value;
+
+  bool get onPhoneBrain => version == 'phone';
+
   Future<void> unpairLaptop() async {
-    PairingStore(Directory(await PhoneDevice.filesDir())).clear();
+    final folder = Directory(await PhoneDevice.filesDir());
+    PairingStore(folder).clear();
+    PhoneMode(folder).value = '';
     await _core?.close();
     _core = null;
     await boot();
@@ -647,7 +730,14 @@ class AssistantController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void speak(String text) => _core?.send({'type': 'speak', 'text': text.length > 5000 ? text.substring(0, 5000) : text});
+  void speak(String text) {
+    final short = text.length > 5000 ? text.substring(0, 5000) : text;
+    if (onPhone) {
+      unawaited(PhoneDevice.speak(short, _speechLang));
+    } else {
+      _core?.send({'type': 'speak', 'text': short});
+    }
+  }
 
   void newConversation() {
     if (busy) return;

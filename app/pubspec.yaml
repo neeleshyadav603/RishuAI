@@ -17,3 +17,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    # The phone's own brain: providers, model IDs and prompts (generated from config/).
+    - assets/brain.json

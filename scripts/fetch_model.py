@@ -1,6 +1,7 @@
 """Download Rishu's offline model file for the installer (CI), checked by size and SHA-256.
 
-Which model: config/models.yaml -> local_model.choices.<choice> (repo, file_suffix).
+Which model: config/models.yaml -> local_model.choices.<choice> (repo, preferred
+quantisation); the file is chosen like the app does (rishu_core.llm.local.pick_file).
 Usage: python scripts/fetch_model.py --choice small --out dist/rishu-core/local-llm/models
 """
 
@@ -15,6 +16,9 @@ import httpx
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "core"))
+
+from rishu_core.llm.local import pick_file
 
 
 def main() -> int:
@@ -24,12 +28,17 @@ def main() -> int:
     args = parser.parse_args()
     cfg = yaml.safe_load((ROOT / "config" / "models.yaml").read_text(encoding="utf-8"))["local_model"]
     spec = cfg["choices"][args.choice]
-    repo, suffix = spec["repo"], spec.get("file_suffix", "Q4_K_M.gguf")
+    repo = spec["repo"]
     with httpx.Client(timeout=httpx.Timeout(30, read=300), follow_redirects=True) as http:
         info = http.get(f"https://huggingface.co/api/models/{repo}", params={"blobs": "true"})
         info.raise_for_status()
-        sibling = next(s for s in info.json()["siblings"] if s["rfilename"].endswith(suffix))
-        name = sibling["rfilename"]
+        siblings = [s for s in info.json().get("siblings", []) if isinstance(s, dict)]
+        names = [str(s.get("rfilename", "")) for s in siblings]
+        name = pick_file(names, spec)
+        if name is None:
+            print(f"no usable .gguf file in {repo}: {names}", file=sys.stderr)
+            return 1
+        sibling = next(s for s in siblings if s.get("rfilename") == name)
         lfs = sibling.get("lfs") or {}
         size, sha = int(lfs.get("size") or 0), str(lfs.get("sha256", ""))
         out = Path(args.out)

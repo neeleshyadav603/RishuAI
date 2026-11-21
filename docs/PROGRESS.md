@@ -150,6 +150,21 @@ with Groq/free keys (no model on the phone), remaining P9/P10 items, one release
       small model gets a short rules prompt (`system_rules_compact.md`) and 24
       everyday tools; context 6144. The bundled file cannot be deleted from
       Settings; the 1.7B model is still an optional download.
+      Fix (21 Nov): the model repo does not publish every quantisation, so the
+      file is picked by preference (Q4_K_M, Q4_K_S, Q4_0, Q5_K_M, Q5_0, Q6_K,
+      Q8_0) in the app and in CI; the build now fails if the model is missing.
+- [x] The phone works without the laptop (online brain, no model on the phone):
+      `app/lib/core/phone_core.dart` speaks the same protocol as the laptop
+      core; providers, model IDs and prompts come from `app/assets/brain.json`
+      (generated from `config/` by `scripts/make_phone_brain.py`, checked in
+      CI), Groq → Gemini → OpenRouter free models with fallback; keys encrypted
+      with an Android Keystore AES-GCM key. Phone tools: time, alarm, timer,
+      open an app, open a link, YouTube, contacts lookup, dialer (user presses
+      call), WhatsApp chat with the text typed (user presses Send), web search
+      (DuckDuckGo lite), weather (Open-Meteo), remember/forget. Dialer and
+      WhatsApp wait for approval. Modes: phone only, or laptop when reachable
+      and the phone brain when not (after pairing). LMS, sheets, Word/Excel,
+      teach mode and the lock stay laptop features (said in Settings).
 
 P9 — Android app
 - [ ] Talk to Rishu, reminders, open apps, WhatsApp on the phone; send a command
@@ -165,9 +180,11 @@ P9 — Android app
         certificate for every connection, the same chat UI; voice through
         Android's own speech recognizer (hi-IN / en-IN) and text-to-speech
         (Kotlin MethodChannel, no packages); replies and reminders spoken.
-  - [ ] Phone-only actions (alarms, open phone apps, WhatsApp on the phone)
+  - [x] Phone-only actions (alarms, open phone apps, WhatsApp on the phone)
         and a mode without the laptop (direct Groq key on the phone).
-  - Needs device test: pairing on a real phone and Wi-Fi, Windows Firewall prompt.
+  - Needs device test: pairing on a real phone and Wi-Fi, Windows Firewall
+    prompt; phone brain with a real Groq key, alarm/timer intents on the
+    phone's clock app, contacts permission, Keystore on older phones.
 
 P10 — Later
 - [ ] Dictation into any app, find/open/organise files, PDF/Word summaries,
@@ -361,6 +378,8 @@ See spec §14. Break each phase into checklist items here when it starts.
   window to the front.
 - `hello` event and `new_conversation` event in the protocol; `assistant_token`
   can carry `reset` (withdraw a half-written reply).
+- The phone falls back to its own online brain when the paired laptop is off
+  or away (owner asked for a phone that works on its own, 21 Nov).
 
 ## Ideas backlog (owner gave freedom to add features)
 

@@ -243,3 +243,39 @@ def test_runtime_swaps_the_long_rules_for_the_short_ones(settings, registry, tmp
     short = compact[0]["content"]
     assert read_prompt("system_rules_compact") in short and read_prompt("system_rules") not in short
     assert len(short) < len(prompt) * 0.75
+
+
+def test_the_preferred_quantisation_that_the_repo_has_is_chosen():
+    from rishu_core.llm.local import pick_file
+
+    spec = {"file_suffix": "Q4_K_M.gguf"}
+    files = ["Qwen3-0.6B-f16.gguf", "Qwen3-0.6B-Q8_0.gguf", "README.md"]
+    assert pick_file(files, spec) == "Qwen3-0.6B-Q8_0.gguf"
+    assert pick_file([*files, "qwen3-0.6b-q4_k_m.gguf"], spec) == "qwen3-0.6b-q4_k_m.gguf"
+    assert pick_file(["mmproj-Q8_0.gguf", "Qwen3-0.6B-f16.gguf"], spec) is None
+
+
+def test_a_repo_without_the_first_choice_still_downloads(tmp_path):
+    blob = b"GGUF" + b"x" * 500
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "/api/models/" in request.url.path:
+            files = [
+                {"rfilename": "Qwen3-0.6B-f16.gguf"},
+                {
+                    "rfilename": "Qwen3-0.6B-Q8_0.gguf",
+                    "lfs": {"size": len(blob), "sha256": hashlib.sha256(blob).hexdigest()},
+                },
+            ]
+            return httpx.Response(200, json={"siblings": files})
+        return httpx.Response(200, content=blob)
+
+    model = LocalModel(
+        tmp_path,
+        CFG,
+        server=lambda: tmp_path / "llama-server.exe",
+        http=httpx.Client(transport=httpx.MockTransport(handler)),
+        sleep=lambda s: None,
+    )
+    assert model.download() is True
+    assert model.model_path().name == "Qwen3-0.6B-Q8_0.gguf"
