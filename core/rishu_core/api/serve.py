@@ -187,4 +187,5 @@ def serve(
         server.run(sockets=[sock])
     finally:
         runtime.local.stop()  # never leave the offline model engine running
+        runtime.stop_phone_link()
     return 0

@@ -9,6 +9,7 @@ import 'state/assistant.dart';
 import 'ui/home.dart';
 import 'ui/lock.dart';
 import 'ui/onboarding.dart';
+import 'ui/pair.dart';
 import 'ui/orb.dart';
 import 'ui/theme.dart';
 
@@ -67,6 +68,7 @@ class RishuApp extends StatelessWidget {
             Phase.onboarding => OnboardingScreen(key: const ValueKey('onboarding'), controller: controller),
             Phase.ready when controller.locked => LockScreen(key: const ValueKey('lock'), controller: controller),
             Phase.ready => HomeScreen(key: const ValueKey('home'), controller: controller),
+            Phase.pairing => PairScreen(key: const ValueKey('pair'), controller: controller),
           },
         ),
       ),

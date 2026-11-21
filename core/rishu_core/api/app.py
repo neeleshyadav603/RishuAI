@@ -32,15 +32,22 @@ def _token_ok(runtime: CoreRuntime, header: str | None) -> bool:
     )
 
 
-def create_app(runtime: CoreRuntime) -> FastAPI:
+def _device_ok(runtime: CoreRuntime, header: str | None) -> bool:
+    scheme, _, value = (header or "").partition(" ")
+    return scheme.lower() == "bearer" and runtime.phone.device_for(value.strip()) is not None
+
+
+def create_app(runtime: CoreRuntime, remote: bool = False) -> FastAPI:
+    """The core's API. ``remote`` is the phone-link app on the LAN (TLS, device tokens)."""
     app = FastAPI(title="Rishu core", version=__version__, docs_url=None, redoc_url=None)
     app.openapi_url = None
     app.state.runtime = runtime
+    check = _device_ok if remote else _token_ok
 
     def authorized(request: Request) -> None:
         if request.headers.get("origin"):
             raise HTTPException(status_code=403, detail="browser requests are not allowed")
-        if not _token_ok(runtime, request.headers.get("authorization")):
+        if not check(runtime, request.headers.get("authorization")):
             raise HTTPException(status_code=401, detail="missing or wrong session token")
 
     guard = [Depends(authorized)]
@@ -101,6 +108,56 @@ def create_app(runtime: CoreRuntime) -> FastAPI:
         runtime.lock.remove_phrase()
         runtime.lock_changed()
         return runtime.lock.status()
+
+    if remote:
+
+        @app.get("/v1/phone/hello")
+        async def phone_hello() -> dict[str, Any]:
+            return runtime.phone.hello()
+
+        @app.post("/v1/phone/pair")
+        async def phone_pair(request: Request) -> dict[str, Any]:
+            body = await _json_object(request)
+            code, device = body.get("code"), body.get("device", "Phone")
+            if not isinstance(code, str) or not isinstance(device, str):
+                raise HTTPException(status_code=422, detail="code and device must be text")
+            token = await asyncio.to_thread(runtime.phone.pair, code, device)
+            if token is None:
+                await asyncio.sleep(1.0)  # slow down guessing
+                raise HTTPException(status_code=403, detail="wrong or expired code")
+            runtime.phone_paired()
+            return {"token": token}
+
+    else:
+
+        @app.get("/v1/phone", dependencies=private)
+        async def phone_status() -> dict[str, Any]:
+            return runtime.phone.status()
+
+        @app.post("/v1/phone/start", dependencies=private)
+        async def phone_start() -> dict[str, Any]:
+            try:
+                info = await asyncio.to_thread(runtime.start_phone_link)
+            except Exception as exc:  # noqa: BLE001 - port, certificate or firewall problems
+                raise HTTPException(
+                    status_code=500, detail=f"could not start the phone link: {exc}"
+                ) from exc
+            return {
+                **runtime.phone.status(),
+                "code": info["code"],
+                "expires_in": info["expires_in"],
+            }
+
+        @app.post("/v1/phone/stop", dependencies=private)
+        async def phone_stop() -> dict[str, Any]:
+            await asyncio.to_thread(runtime.stop_phone_link)
+            return runtime.phone.status()
+
+        @app.delete("/v1/phone/devices/{device_id}", dependencies=private)
+        async def phone_remove(device_id: str) -> dict[str, Any]:
+            if not runtime.phone.remove(device_id):
+                raise HTTPException(status_code=404, detail="no such phone")
+            return runtime.phone.status()
 
     @app.get("/v1/local-model", dependencies=guard)
     async def local_model_status() -> dict[str, Any]:
@@ -178,13 +235,13 @@ def create_app(runtime: CoreRuntime) -> FastAPI:
 
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:
-        if websocket.headers.get("origin") or not _token_ok(
+        if websocket.headers.get("origin") or not check(
             runtime, websocket.headers.get("authorization")
         ):
             await websocket.close(code=1008)
             return
         await websocket.accept()
-        await _serve_connection(runtime, websocket)
+        await _serve_connection(runtime, websocket, remote)
 
     return app
 
@@ -202,7 +259,9 @@ async def _json_object(request: Request, allow_empty: bool = False) -> dict[str,
     return data
 
 
-async def _serve_connection(runtime: CoreRuntime, websocket: WebSocket) -> None:
+async def _serve_connection(
+    runtime: CoreRuntime, websocket: WebSocket, remote: bool = False
+) -> None:
     loop = asyncio.get_running_loop()
     outbox: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
 
@@ -220,7 +279,7 @@ async def _serve_connection(runtime: CoreRuntime, websocket: WebSocket) -> None:
                 return
             await websocket.send_text(json.dumps(event, ensure_ascii=False))
 
-    session = Session(runtime, send)
+    session = Session(runtime, send, remote=remote)
     sender = asyncio.create_task(pump())
     turns: set[asyncio.Task[None]] = set()
     max_chars = int(runtime.server_option("max_message_chars", 8000))

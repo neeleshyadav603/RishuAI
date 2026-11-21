@@ -90,6 +90,9 @@ class CoreRuntime:
         )
         self.voice.set_persona(self.public_settings()["persona"])
         self.local = local_model or LocalModel(self.home, settings.models.get("local_model") or {})
+        from .phone import PhoneLink
+
+        self.phone = PhoneLink(self.home)
         self.local.choice = self.public_settings()["local_model"] or self.local.choice
 
     # ---- settings ------------------------------------------------------
@@ -387,24 +390,87 @@ class CoreRuntime:
         state.pop("type", None)
         return state
 
-    def attach(self, session: Any) -> None:
-        self.active_session = session
+    def _listen_to(self, session: Any) -> None:
         teach = getattr(self.registry, "teach", None)
+        targets = [session.send_event] if session is not None else []
         if teach is not None:
-            teach.listeners[:] = [session.send_event]
-        self.local.listeners[:] = [session.send_event]
+            teach.listeners[:] = targets
+        self.local.listeners[:] = targets
+
+    def attach(self, session: Any) -> None:
+        """The newest window (laptop app or paired phone) gets reminders and events."""
+        self._sessions = [s for s in getattr(self, "_sessions", []) if s is not session] + [session]
+        self.active_session = session
+        self._listen_to(session)
 
     def detach(self, session: Any) -> None:
+        self._sessions = [s for s in getattr(self, "_sessions", []) if s is not session]
         if getattr(self, "active_session", None) is session:
-            self.active_session = None
-            teach = getattr(self.registry, "teach", None)
-            if teach is not None:
-                teach.listeners[:] = []
-            self.local.listeners[:] = []
+            self.active_session = self._sessions[-1] if self._sessions else None
+            self._listen_to(self.active_session)
+
+    # ---- phone link -----------------------------------------------------------
+
+    def start_phone_link(self) -> dict[str, Any]:
+        """Listen on the home network (TLS) and show a pairing code."""
+        from .phone import BEACON_PORT, DEFAULT_PORT, beacon  # noqa: F401
+
+        info = self.phone.start_pairing()
+        if not self.phone.running:
+            import socket as _socket
+
+            import uvicorn
+
+            from .app import create_app
+
+            port = DEFAULT_PORT
+            with _socket.socket() as probe:
+                try:
+                    probe.bind(("0.0.0.0", port))  # noqa: S104 - the phone link listens on the LAN
+                except OSError:
+                    probe.bind(("0.0.0.0", 0))  # noqa: S104
+                    port = probe.getsockname()[1]
+            self.phone.port = port
+            config = uvicorn.Config(
+                create_app(self, remote=True),
+                host="0.0.0.0",  # noqa: S104
+                port=port,
+                log_level="warning",
+                access_log=False,
+                lifespan="off",
+                ws_max_size=1_000_000,
+                ssl_certfile=str(self.phone.cert),
+                ssl_keyfile=str(self.phone.key),
+            )
+            self._phone_server = uvicorn.Server(config)
+            self._phone_stop = threading.Event()
+            threading.Thread(
+                target=self._phone_server.run, name="rishu-phone-link", daemon=True
+            ).start()
+            threading.Thread(
+                target=beacon, args=(self.phone, self._phone_stop), name="rishu-beacon", daemon=True
+            ).start()
+            self.phone.running = True
+            info = {**info, "port": port}
+        return info
+
+    def phone_paired(self) -> None:
+        """A phone just paired: tell the laptop app (its Settings show the phone)."""
+        for session in list(getattr(self, "_sessions", [])):
+            session.send_event(self.phone.status())
+
+    def stop_phone_link(self) -> None:
+        server = getattr(self, "_phone_server", None)
+        if server is not None:
+            server.should_exit = True
+            self._phone_stop.set()
+        self._phone_server = None
+        self.phone.running = False
 
     def hotkey_pressed(self) -> None:
         """Ctrl+Shift+Space anywhere in Windows: talk to Rishu."""
-        session = getattr(self, "active_session", None)
+        local = [x for x in getattr(self, "_sessions", []) if not getattr(x, "remote", False)]
+        session = local[-1] if local else None
         if session is None:
             return
         from ..voice.hotkey import bring_app_to_front

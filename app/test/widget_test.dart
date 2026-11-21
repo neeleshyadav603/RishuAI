@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rishu/core/connection.dart';
+import 'package:rishu/core/remote.dart';
 import 'package:rishu/main.dart';
 import 'package:rishu/state/assistant.dart';
 import 'package:rishu/ui/markdown.dart';
@@ -157,6 +159,25 @@ void main() {
     expect(c.localModel.choices.keys, ['small', 'better']);
     await c.downloadLocalModel();
     expect(core.requests.last, 'POST /v1/local-model/download');
+  });
+
+  test('sha256 and hmac match the standard test vectors (phone pairing proof)', () {
+    expect(hex(sha256(utf8.encode('abc'))), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+    expect(hex(sha256(utf8.encode(''))), 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+    expect(hex(sha256(List<int>.filled(1000, 97))), '41edece42d63e8d9bf515a9ba6932e1c20cbc9f5a5d134645adb5db1b9737ea3');
+    expect(hex(hmacSha256(utf8.encode('Jefe'), utf8.encode('what do ya want for nothing?'))),
+        '5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843');
+  });
+
+  test('phone link: start shows a code, events update the paired phones', () async {
+    final (c, core) = await started();
+    await c.startPhoneLink();
+    expect(core.requests.last, 'POST /v1/phone/start');
+    core.controller.add({'v': 1, 'type': 'phone_link', 'running': true, 'port': 47800, 'addresses': ['192.168.1.5'],
+        'pairing': false, 'devices': [{'id': 'ab12', 'name': 'Pixel'}]});
+    await Future<void>.delayed(Duration.zero);
+    expect(c.phoneLink.devices.single['name'], 'Pixel');
+    expect(c.phoneLink.code, '');
   });
 
   test('voice: listen, transcript, level and stop', () async {

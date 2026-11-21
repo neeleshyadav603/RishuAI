@@ -6,6 +6,7 @@ import '../state/assistant.dart';
 import 'chat.dart' show tr;
 import 'lock.dart' show SecuritySettings;
 import 'offline.dart' show OfflineModelSettings;
+import 'phone_link.dart' show PhoneLinkSettings;
 import 'teach.dart' show TaughtSkills;
 import 'theme.dart';
 
@@ -258,6 +259,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: const TextStyle(color: RishuColors.muted, fontSize: 12.5),
             ),
           ],
+        ),
+        _Section(
+          icon: Icons.phone_android_rounded,
+          title: tr(c, 'Phone se jodo', 'Phone link'),
+          children: [PhoneLinkSettings(controller: c)],
         ),
         _Section(
           icon: Icons.offline_bolt_rounded,

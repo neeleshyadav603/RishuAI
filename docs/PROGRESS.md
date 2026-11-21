@@ -140,6 +140,20 @@ bundles llama.cpp's CPU server, ≈47 MB).
 P9 — Android app
 - [ ] Talk to Rishu, reminders, open apps, WhatsApp on the phone; send a command
       to the laptop Rishu (LMS and other heavy work run on the laptop).
+  - [x] Phone link (laptop side): Settings → "Phone se jodo" starts a TLS
+        listener on the home Wi-Fi (self-signed certificate made on the PC,
+        `cryptography`), a 6-digit code for 10 minutes (5 tries), proof
+        HMAC(code, certificate fingerprint) against a man in the middle,
+        device tokens stored as hashes, phones listed and removable, UDP
+        beacon so the phone finds the laptop. Phone sessions never use the
+        PC's microphone or speakers; the newest window gets reminders.
+  - [x] Android app: pairing screen (finds the laptop, code), pinned
+        certificate for every connection, the same chat UI; voice through
+        Android's own speech recognizer (hi-IN / en-IN) and text-to-speech
+        (Kotlin MethodChannel, no packages); replies and reminders spoken.
+  - [ ] Phone-only actions (alarms, open phone apps, WhatsApp on the phone)
+        and a mode without the laptop (direct Groq key on the phone).
+  - Needs device test: pairing on a real phone and Wi-Fi, Windows Firewall prompt.
 
 P10 — Later
 - [ ] Dictation into any app, find/open/organise files, PDF/Word summaries,

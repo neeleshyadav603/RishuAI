@@ -392,5 +392,25 @@
       },
       "error": ""
     }
+  },
+  {
+    "dir": "c2a",
+    "event": {
+      "v": 1,
+      "type": "phone_link",
+      "running": true,
+      "port": 47800,
+      "addresses": [
+        "192.168.1.5"
+      ],
+      "pairing": false,
+      "devices": [
+        {
+          "id": "ab12cd34",
+          "name": "Neelesh phone",
+          "paired": 1763700000
+        }
+      ]
+    }
   }
 ]

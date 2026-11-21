@@ -135,7 +135,7 @@ class ChromeLauncher:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        for _ in range(60):
+        for _ in range(160):  # a first start creates the profile: give it up to 40 s
             self._sleep(0.25)
             if self.alive(port):
                 self.folder.mkdir(parents=True, exist_ok=True)

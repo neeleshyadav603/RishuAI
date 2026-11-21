@@ -96,8 +96,11 @@ class SessionApprover:
 
 
 class Session:
-    def __init__(self, runtime: CoreRuntime, send: Callable[[Event], None]):
+    def __init__(self, runtime: CoreRuntime, send: Callable[[Event], None], remote: bool = False):
         self.runtime = runtime
+        # A paired phone: it listens and speaks itself, so this PC's microphone
+        # and speakers are never used for it.
+        self.remote = remote
         self._send = send  # thread-safe: called from the agent thread
         self.approver = SessionApprover(
             runtime.server_option("approval_timeout_seconds", 120.0),
@@ -141,7 +144,7 @@ class Session:
             self._speech_pending = False
             event = {**event, "state": "speaking"}
         self._send(event)
-        if kind == "assistant_message" and not self._closed:
+        if kind == "assistant_message" and not self._closed and not self.remote:
             text = event.get("text") or ""
             settings = self.runtime.public_settings()
             if text and settings.get("speak_replies"):
@@ -254,6 +257,9 @@ class Session:
         silence then simply ends the conversation, without a notice.
         """
         self._voice_turn = False
+        if self.remote:
+            self.error("voice_remote", "The phone listens with its own microphone.")
+            return
         if self.runtime.lock.locked:
             self.unlock_by_voice()
             return
@@ -381,6 +387,8 @@ class Session:
 
     def announce_locked_reminder(self) -> None:
         """A reminder is due while locked: say so without reading it out."""
+        if self.remote:
+            return
         self.speaker.say(
             t("reminder_while_locked", self._language()),
             self.runtime.public_settings().get("voice_gender", "male"),
@@ -479,6 +487,8 @@ class Session:
 
     def deliver_reminder(self, text: str) -> None:
         self._send({"v": PROTOCOL_VERSION, "type": "reminder", "text": text})
+        if self.remote:
+            return  # the phone shows and speaks it
         spoken = f"Reminder: {text}" if self._language() == "en" else f"Yaad dila raha hoon: {text}"
         self.speaker.say(spoken, self.runtime.public_settings().get("voice_gender", "male"))
 
@@ -490,7 +500,7 @@ class Session:
             threading.Thread(target=self.listen, name="rishu-listen", daemon=True).start()
 
     def speak(self, text: str) -> None:
-        if self.runtime.lock.locked:
+        if self.runtime.lock.locked or self.remote:
             return
         if not self.speaker.say(text, self.runtime.public_settings().get("voice_gender", "male")):
             self.error("voice_output", t("voice_output_failed", self._language()) + ".")

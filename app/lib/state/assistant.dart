@@ -1,11 +1,14 @@
 // App state: the conversation, the orb, settings, and every event from the core.
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
 import '../core/connection.dart';
+import '../core/device.dart';
+import '../core/remote.dart';
 
-enum Phase { booting, failed, onboarding, ready }
+enum Phase { booting, failed, onboarding, ready, pairing }
 
 enum OrbMood { connecting, idle, listening, thinking, acting, speaking, offline, locked }
 
@@ -192,9 +195,37 @@ class LocalModelInfo {
   double get fraction => total > 0 ? done / total : 0;
 }
 
+/// The laptop's phone link (Windows side).
+class PhoneLinkInfo {
+  PhoneLinkInfo([Map<String, dynamic>? e, this.code = '', this.codeUntil])
+      : running = e?['running'] == true,
+        port = ((e?['port'] as num?) ?? 47800).toInt(),
+        addresses = [for (final a in (e?['addresses'] as List?) ?? const []) '$a'],
+        pairing = e?['pairing'] == true,
+        devices = [
+          for (final d in (e?['devices'] as List?) ?? const [])
+            if (d is Map) {'id': '${d['id'] ?? ''}', 'name': '${d['name'] ?? ''}'}
+        ];
+  final bool running;
+  final int port;
+  final List<String> addresses;
+  final bool pairing;
+  final List<Map<String, String>> devices;
+  final String code;
+  final DateTime? codeUntil;
+}
+
 typedef Connector = Future<CoreConnection> Function();
 
+/// Android: the paired laptop's Rishu over the home Wi-Fi.
+Future<CoreConnection> connectToPairedLaptop() async {
+  final endpoint = PairingStore(Directory(await PhoneDevice.filesDir())).load();
+  if (endpoint == null) throw NeedsPairing();
+  return RemoteConnection.open(endpoint);
+}
+
 Future<CoreConnection> connectToBundledCore() async {
+  if (Platform.isAndroid) return connectToPairedLaptop();
   final endpoint = await CoreLauncher.start();
   try {
     return await WebSocketConnection.open(endpoint);
@@ -223,6 +254,7 @@ class AssistantController extends ChangeNotifier {
   LockInfo lock = LockInfo();
   TeachInfo teach = TeachInfo();
   LocalModelInfo localModel = LocalModelInfo();
+  PhoneLinkInfo phoneLink = PhoneLinkInfo();
   String lockError = '';
   double approvalTimeout = 120;
   bool disconnected = false;
@@ -255,6 +287,10 @@ class AssistantController extends ChangeNotifier {
       _core = core;
       await _sub?.cancel();
       _sub = core.events.listen(_onEvent, onDone: _onDisconnected);
+    } on NeedsPairing {
+      phase = Phase.pairing;
+      mood = OrbMood.idle;
+      notifyListeners();
     } catch (e) {
       phase = Phase.failed;
       bootError = '$e';
@@ -309,6 +345,7 @@ class AssistantController extends ChangeNotifier {
         _token(e);
       case 'assistant_message':
         _message(e);
+        if (onPhone && speakReplies) unawaited(PhoneDevice.speak('${e['text'] ?? ''}', _speechLang));
       case 'tool_progress':
         _toolProgress(e);
       case 'tool_result':
@@ -321,12 +358,15 @@ class AssistantController extends ChangeNotifier {
         items.add(NoticeItem('${e['text'] ?? ''}'));
       case 'reminder':
         items.add(NoticeItem('⏰ ${e['text'] ?? ''}', reminder: true));
+        if (onPhone) unawaited(PhoneDevice.speak('${e['text'] ?? ''}', _speechLang));
       case 'lock_state':
         _lockState(e);
       case 'teach_state':
         teach = TeachInfo(e);
       case 'local_model':
         localModel = LocalModelInfo(e);
+      case 'phone_link':
+        phoneLink = PhoneLinkInfo(e, e['pairing'] == true ? phoneLink.code : '', phoneLink.codeUntil);
       case 'error':
         final code = '${e['code'] ?? ''}';
         if (locked && (code == 'locked' || code.startsWith('unlock_') || code.startsWith('voice_'))) {
@@ -507,8 +547,60 @@ class AssistantController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// On the phone, speech goes through the phone's own recognizer and voice.
+  bool get onPhone => !kIsWeb && Platform.isAndroid && phoneVoice;
+  bool phoneVoice = true;
+  bool _phoneListening = false;
+
+  String get _speechLang => english ? 'en-IN' : 'hi-IN';
+
+  Future<void> _listenOnPhone() async {
+    if (_phoneListening) {
+      await PhoneDevice.stopListening();
+      return;
+    }
+    _phoneListening = true;
+    mood = OrbMood.listening;
+    notifyListeners();
+    try {
+      final text = await PhoneDevice.listen(_speechLang);
+      mood = OrbMood.idle;
+      if (text.trim().isEmpty) {
+        items.add(NoticeItem(english ? 'I did not hear anything.' : 'Kuch sunai nahi diya. Dobara boliye.'));
+        notifyListeners();
+      } else {
+        sendText(text);
+      }
+    } catch (e) {
+      mood = OrbMood.idle;
+      items.add(NoticeItem(english ? 'The phone could not listen: $e' : 'Phone sun nahi paaya: $e', error: true));
+      notifyListeners();
+    } finally {
+      _phoneListening = false;
+    }
+  }
+
+  /// Pair with the laptop's Rishu (code shown on the laptop), then connect.
+  Future<void> pairLaptop(String host, int port, String code) async {
+    final device = await PhoneDevice.deviceName();
+    final endpoint = await pairWithLaptop(host, port, code, device);
+    PairingStore(Directory(await PhoneDevice.filesDir())).save(endpoint);
+    await boot();
+  }
+
+  Future<void> unpairLaptop() async {
+    PairingStore(Directory(await PhoneDevice.filesDir())).clear();
+    await _core?.close();
+    _core = null;
+    await boot();
+  }
+
   void toggleListening() {
     if (_core == null) return;
+    if (onPhone) {
+      unawaited(_listenOnPhone());
+      return;
+    }
     if (listening) {
       _core!.send({'type': 'listen_stop'});
       return;
@@ -530,6 +622,7 @@ class AssistantController extends ChangeNotifier {
 
   void stop() {
     _core?.send({'type': 'stop'});
+    if (onPhone) unawaited(PhoneDevice.stopSpeaking());
     for (final item in items) {
       if (item is ApprovalItem && item.status == ApprovalStatus.pending) item.status = ApprovalStatus.denied;
     }
@@ -571,6 +664,30 @@ class AssistantController extends ChangeNotifier {
   void teachCancel() => _core?.send({'type': 'teach_cancel'});
 
   void forgetSkill(String name) => _core?.send({'type': 'forget_skill', 'name': name});
+
+  // ---- phone link (laptop side) ------------------------------------------------
+
+  Future<void> refreshPhoneLink() async {
+    phoneLink = PhoneLinkInfo(await _req('GET', '/v1/phone'), phoneLink.code, phoneLink.codeUntil);
+    notifyListeners();
+  }
+
+  Future<void> startPhoneLink() async {
+    final r = await _req('POST', '/v1/phone/start');
+    final seconds = (r['expires_in'] as num?)?.toInt() ?? 600;
+    phoneLink = PhoneLinkInfo(r, '${r['code'] ?? ''}', DateTime.now().add(Duration(seconds: seconds)));
+    notifyListeners();
+  }
+
+  Future<void> stopPhoneLink() async {
+    phoneLink = PhoneLinkInfo(await _req('POST', '/v1/phone/stop'));
+    notifyListeners();
+  }
+
+  Future<void> removePhone(String id) async {
+    phoneLink = PhoneLinkInfo(await _req('DELETE', '/v1/phone/devices/$id'), phoneLink.code, phoneLink.codeUntil);
+    notifyListeners();
+  }
 
   // ---- offline model -----------------------------------------------------------
 

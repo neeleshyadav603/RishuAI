@@ -119,6 +119,9 @@
     },
     {
       "$ref": "#/$defs/local_model"
+    },
+    {
+      "$ref": "#/$defs/phone_link"
     }
   ],
   "$defs": {
@@ -985,6 +988,38 @@
       },
       "required": [
         "downloaded"
+      ]
+    },
+    "phone_link": {
+      "description": "c2a. The phone link: listening on the home Wi-Fi, pairing open, paired phones.",
+      "properties": {
+        "type": {
+          "const": "phone_link"
+        },
+        "running": {
+          "type": "boolean"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "addresses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pairing": {
+          "type": "boolean"
+        },
+        "devices": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "required": [
+        "running"
       ]
     }
   }
