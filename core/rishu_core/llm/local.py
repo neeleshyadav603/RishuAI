@@ -244,6 +244,8 @@ class LocalModel:
                 "--jinja", "--reasoning-format", "deepseek", "-ngl", "0",
                 "--chat-template-kwargs", '{"enable_thinking": false}',
             ]  # fmt: skip
+            # The models folder may not exist yet when only the bundled model is used.
+            self.folder.mkdir(parents=True, exist_ok=True)
             self._log = log = (self.folder / "server.log").open("ab")
             flags = CREATE_NO_WINDOW if sys.platform == "win32" else 0
             self._process = self._spawn(

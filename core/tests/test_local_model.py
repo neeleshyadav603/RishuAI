@@ -191,6 +191,26 @@ def test_bundled_model_is_found_and_never_deleted(tmp_path):
     assert bundled.exists()
 
 
+def test_bundled_model_starts_before_anything_was_downloaded(tmp_path):
+    # Regression: the user's models folder does not exist yet on a fresh install.
+    server = tmp_path / "local-llm" / "llama-server.exe"
+    (tmp_path / "local-llm" / "models").mkdir(parents=True)
+    server.write_text("x")
+    (tmp_path / "local-llm" / "models" / "Qwen3-0.6B-Q4_0.gguf").write_bytes(BLOB)
+    http, _ = hub()
+    model = LocalModel(
+        tmp_path / "fresh-home",
+        CFG,
+        server=lambda: server,
+        http=http,
+        spawn=lambda args, **kwargs: FakeProcess(args),
+        sleep=lambda s: None,
+    )
+    assert model.ensure().startswith("http://127.0.0.1:")
+    assert (tmp_path / "fresh-home" / "models" / "server.log").exists()
+    model.stop()
+
+
 def test_compact_prompt_is_used_only_for_small_local_models():
     seen = []
 

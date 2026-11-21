@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +29,7 @@ from . import (
     vision,
     weather,
     web,
+    work,
 )
 from .registry import Tool, ToolRegistry, ToolResult
 
@@ -61,6 +62,7 @@ def build_registry(
     controls: system.SystemControls | None = None,
     vision_ask: vision.VisionAsk | None = None,
     web_browser: Browser | None = None,
+    typist: work.Typist | None = None,
 ) -> ToolRegistry:
     """Create the registry with every Phase 1 tool. Dependencies are injectable for tests."""
     registry = ToolRegistry()
@@ -484,6 +486,7 @@ def build_registry(
     lexyta.register(registry, registry.browser)
     _register_files(registry, folder, controls, vision_ask)
     _register_teacher(registry, folder, now, open_uri)
+    _register_work(registry, folder, now, http_transport, typist)
     return registry
 
 
@@ -731,5 +734,269 @@ def _register_teacher(
             risk=Risk.R1,
             handler=open_file,
             preview_fn=lambda a: f"Open {a.get('path', '')}",
+        )
+    )
+
+
+def _register_work(
+    registry: ToolRegistry,
+    folder: Path,
+    now: Callable[[], datetime],
+    http_transport: httpx.BaseTransport | None,
+    typist: work.Typist | None,
+) -> None:
+    """Everyday work: documents, tidy folders, dictation, deadlines, invoices, meetings."""
+    organiser = work.Organiser(folder / "organise_undo.json")
+    typist = typist or work.Typist()
+    deadlines = work.Deadlines(folder / "deadlines.json", now=now)
+    meeting = work.MeetingRecorder(clock=now)
+    registry.deadlines, registry.meeting = deadlines, meeting
+
+    registry.register(
+        Tool(
+            name="read_document",
+            description=(
+                "Read the text of a PDF, Word, Excel, PowerPoint or text file on this computer, to summarise it, "
+                "answer questions about it or check a student's submission. pages: e.g. '1-5' for long PDFs."
+            ),
+            parameters=_obj({"path": {"type": "string"}, "pages": {"type": "string"}}, ["path"]),
+            risk=Risk.R0,
+            handler=lambda path, pages="": work.read_document(path, pages),
+            untrusted_output=True,
+        )
+    )
+    registry.register(
+        Tool(
+            name="organise_folder",
+            description=(
+                "Tidy a folder (Downloads, Desktop, Documents or a path) into sub-folders by type: Documents, "
+                "Sheets, Slides, Pictures, Videos, Music, Archives, Installers, Code. apply=false shows the plan; "
+                "apply=true moves the files (never deletes; undo_organise puts them back)."
+            ),
+            parameters=_obj(
+                {"folder": {"type": "string"}, "apply": {"type": "boolean"}}, ["folder"]
+            ),
+            risk=Risk.R0,
+            risk_fn=lambda a: Risk.R2 if a.get("apply") else Risk.R0,
+            handler=lambda folder, apply=False: (
+                organiser.apply(folder) if apply else ToolResult(True, organiser.describe(folder))
+            ),
+            preview_fn=lambda a: organiser.describe(str(a.get("folder", ""))),
+        )
+    )
+    registry.register(
+        Tool(
+            name="undo_organise",
+            description="Put back the files that the last organise_folder moved.",
+            parameters=_obj({}),
+            risk=Risk.R2,
+            handler=organiser.undo,
+            preview_fn=lambda a: "Move the files from the last tidy-up back to where they were",
+        )
+    )
+
+    def type_preview(args: dict[str, Any]) -> str:
+        text = str(args.get("text", ""))
+        found = typist.target()
+        where = f"'{found[1]}'" if found else "the app behind Rishu"
+        return f'Type "{text[:120]}{"…" if len(text) > 120 else ""}" into {where}'
+
+    registry.register(
+        Tool(
+            name="type_text",
+            description=(
+                "Dictation: type text into the app the user was using just before Rishu (Word, Notepad, a browser "
+                "form, WhatsApp Desktop chat box). Not for passwords; never into terminals."
+            ),
+            parameters=_obj({"text": {"type": "string"}}, ["text"]),
+            risk=Risk.R2,
+            handler=lambda text: typist.type_into(text),
+            preview_fn=type_preview,
+        )
+    )
+    registry.register(
+        Tool(
+            name="copy_to_clipboard",
+            description="Put text on the clipboard so the user can paste it (Ctrl+V), e.g. a LinkedIn post draft.",
+            parameters=_obj({"text": {"type": "string"}}, ["text"]),
+            risk=Risk.R1,
+            handler=lambda text: (
+                ToolResult(True, "Copied. Paste it with Ctrl+V.")
+                if typist.copy(text)
+                else ToolResult(False, "The clipboard works on Windows only.")
+            ),
+            preview_fn=lambda a: "Copy the text to the clipboard",
+        )
+    )
+
+    def add_deadline(title: str, due: str, client: str = "", note: str = "") -> ToolResult:
+        today = now().date()
+        day = work.parse_day(due, today)
+        if day is None:
+            return ToolResult(
+                False, f"Could not understand the date '{due}'. Use e.g. 30 Nov or 2026-11-30."
+            )
+        item = deadlines.add(title, day, client, note)
+        reminded = 0
+        for days_before in (1, 0):
+            moment = datetime.combine(
+                day - timedelta(days=days_before), datetime.min.time()
+            ).replace(hour=9)
+            if moment > now() and registry.reminders is not None:
+                when = "tomorrow" if days_before else "today"
+                registry.reminders.add(f"Deadline {when}: {item['title']}", moment.timestamp())
+                reminded += 1
+        return ToolResult(
+            True,
+            f"Saved: {work.describe_deadline(item, today)}."
+            + (f" Rishu will remind at 9 AM ({reminded} reminders)." if reminded else ""),
+        )
+
+    registry.register(
+        Tool(
+            name="deadline_add",
+            description=(
+                "Save a work or freelancing deadline (project, assignment, client delivery). due: e.g. '30 Nov', "
+                "'2026-11-30', 'friday', 'kal'. Rishu reminds at 9 AM the day before and on the day."
+            ),
+            parameters=_obj(
+                {
+                    "title": {"type": "string"},
+                    "due": {"type": "string"},
+                    "client": {"type": "string"},
+                    "note": {"type": "string"},
+                },
+                ["title", "due"],
+            ),
+            risk=Risk.R1,
+            handler=add_deadline,
+            preview_fn=lambda a: f"Save the deadline '{a.get('title', '')}' ({a.get('due', '')})",
+        )
+    )
+
+    def list_deadlines(days: int = 30) -> ToolResult:
+        items = deadlines.upcoming(max(1, min(int(days), 366)))
+        if not items:
+            return ToolResult(True, "No deadlines saved.")
+        today = now().date()
+        return ToolResult(True, "\n".join(work.describe_deadline(d, today) for d in items))
+
+    registry.register(
+        Tool(
+            name="deadlines",
+            description="The user's saved deadlines in the next N days (default 30), overdue ones included.",
+            parameters=_obj({"days": {"type": "integer"}}),
+            risk=Risk.R0,
+            handler=list_deadlines,
+        )
+    )
+    registry.register(
+        Tool(
+            name="deadline_done",
+            description="Mark deadlines as done (removes those whose title contains the words).",
+            parameters=_obj({"title": {"type": "string"}}, ["title"]),
+            risk=Risk.R1,
+            handler=lambda title: ToolResult(
+                True, f"Marked {deadlines.done(title)} deadlines as done."
+            ),
+        )
+    )
+    item = {
+        "type": "object",
+        "properties": {
+            "description": {"type": "string"},
+            "quantity": {"type": "number"},
+            "rate": {"type": "number", "description": "Price per unit in rupees"},
+        },
+        "required": ["description", "rate"],
+    }
+    registry.register(
+        Tool(
+            name="make_invoice",
+            description=(
+                "Create a Word invoice in Documents/Rishu (freelancing, tuition, workshops): numbered INV-year-001, "
+                "items with quantity and rate, optional GST %, total in Indian format and in words."
+            ),
+            parameters=_obj(
+                {
+                    "client": {"type": "string"},
+                    "items": {"type": "array", "items": item},
+                    "gst_percent": {"type": "number"},
+                    "from_name": {"type": "string"},
+                    "from_details": {
+                        "type": "string",
+                        "description": "Address, GSTIN, UPI or bank details",
+                    },
+                    "client_details": {"type": "string"},
+                    "due": {"type": "string"},
+                    "notes": {"type": "string"},
+                },
+                ["client", "items"],
+            ),
+            risk=Risk.R1,
+            handler=lambda client, items, **extra: work.make_invoice(
+                client, items, counter_path=folder / "invoices.json", now=now, **extra
+            ),
+            preview_fn=lambda a: f"Create an invoice for {a.get('client', '')} in Documents/Rishu",
+        )
+    )
+
+    def briefing(city: str = "") -> ToolResult:
+        current = now()
+        table = registry.timetable
+        classes = [teacher.describe(e) for e in table.on(current.weekday())] if table else []
+        pending = registry.reminders.pending() if registry.reminders is not None else []
+        weather_text = ""
+        if city.strip():
+            result = weather.weather(city, http_transport)
+            weather_text = result.content if result.ok else ""
+        return work.morning_briefing(
+            now=current,
+            classes=classes,
+            reminders=pending,
+            deadlines=deadlines.upcoming(7),
+            weather_text=weather_text,
+        )
+
+    registry.register(
+        Tool(
+            name="morning_briefing",
+            description=(
+                "The user's day at a glance: today's classes, reminders, deadlines this week and the weather "
+                "(give the user's city if known). Use for 'good morning', 'aaj kya hai', 'din ka plan'."
+            ),
+            parameters=_obj({"city": {"type": "string"}}),
+            risk=Risk.R0,
+            handler=briefing,
+        )
+    )
+    registry.register(
+        Tool(
+            name="meeting_start",
+            description=(
+                "Start recording a meeting or lecture from the microphone, to make meeting notes later "
+                "(needs the free Groq key). Everyone present should know it is being recorded."
+            ),
+            parameters=_obj({"title": {"type": "string"}}),
+            risk=Risk.R2,
+            handler=lambda title="": meeting.start(title),
+            preview_fn=lambda a: (
+                f"Record the meeting '{a.get('title') or 'Meeting'}' from the microphone "
+                "(tell everyone it is being recorded)"
+            ),
+        )
+    )
+    registry.register(
+        Tool(
+            name="meeting_stop",
+            description=(
+                "Stop the meeting recording and get the transcript (saved as a .txt). Then write the notes: "
+                "summary, decisions, action items with owners and dates; make_document if the user wants a file."
+            ),
+            parameters=_obj({}),
+            risk=Risk.R1,
+            handler=meeting.stop,
+            untrusted_output=True,
+            preview_fn=lambda a: "Stop the meeting recording and turn it into text",
         )
     )

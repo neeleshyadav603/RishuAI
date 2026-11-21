@@ -7,6 +7,7 @@ from rishu_core.security import WindowsHello
 from rishu_core.tools import build_registry
 from rishu_core.tools.apps import AppLauncher
 from rishu_core.tools.system import SystemControls
+from rishu_core.tools.work import Typist
 from rishu_core.voice import engine as voice_engine
 from rishu_core.voice.player import NullPlayer
 
@@ -67,6 +68,7 @@ def registry(settings, spawned, opened_urls, tmp_path):
         controls=SystemControls(
             platform="win32", press=lambda vk: None, lock=lambda: True, battery=lambda: (80, False)
         ),
+        typist=Typist(platform="test"),  # never real key presses or clipboard in tests
     )
 
 

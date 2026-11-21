@@ -89,11 +89,39 @@ class CoreRuntime:
             transport=transport,
         )
         self.voice.set_persona(self.public_settings()["persona"])
+        self._attach_meeting()
         self.local = local_model or LocalModel(self.home, settings.models.get("local_model") or {})
         from .phone import PhoneLink
 
         self.phone = PhoneLink(self.home)
         self.local.choice = self.public_settings()["local_model"] or self.local.choice
+
+    def _attach_meeting(self) -> None:
+        """Meeting notes use the same microphone and speech-to-text as voice turns."""
+        meeting = getattr(self.registry, "meeting", None)
+        if meeting is None:
+            return
+        from ..voice.mic import _MicSource
+
+        voice = self.voice
+        meeting.source = getattr(voice, "_mic_source", None) or _MicSource
+
+        def ready() -> tuple[bool, str]:
+            ok, reason = voice.mic()
+            if not ok:
+                return False, reason
+            if not voice.stt_key():
+                return False, "add the free Groq key in Settings"
+            return True, ""
+
+        def transcribe(wav: bytes) -> str:
+            transcriber = voice.transcriber()
+            try:
+                return transcriber.transcribe(wav)
+            finally:
+                transcriber.close()
+
+        meeting.ready, meeting.transcribe = ready, transcribe
 
     # ---- settings ------------------------------------------------------
 

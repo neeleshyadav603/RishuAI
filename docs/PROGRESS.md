@@ -150,6 +150,8 @@ with Groq/free keys (no model on the phone), remaining P9/P10 items, one release
       small model gets a short rules prompt (`system_rules_compact.md`) and 24
       everyday tools; context 6144. The bundled file cannot be deleted from
       Settings; the 1.7B model is still an optional download.
+      Fix (21 Nov): a fresh install crashed starting the bundled model (the
+      user's models folder did not exist yet for the server log); fixed with a test.
       Fix (21 Nov): the model repo does not publish every quantisation, so the
       file is picked by preference (Q4_K_M, Q4_K_S, Q4_0, Q5_K_M, Q5_0, Q6_K,
       Q8_0) in the app and in CI; the build now fails if the model is missing.
@@ -187,9 +189,22 @@ P9 — Android app
     phone's clock app, contacts permission, Keystore on older phones.
 
 P10 — Later
-- [ ] Dictation into any app, find/open/organise files, PDF/Word summaries,
+- [x] Dictation into any app, find/open/organise files, PDF/Word summaries,
       morning briefing, meeting notes, LinkedIn drafts, freelancing helpers
       (proposals, invoices, deadlines). Voice cloning: on hold (owner, 20 Nov).
+      Done (`core/rishu_core/tools/work.py`, 12 tools): read_document (PDF via
+      pypdf BSD-3, Word, Excel, PowerPoint from the .pptx XML, text; untrusted;
+      scans → read_image); organise_folder (plan first, R2 to move, only inside
+      the user folder, never Rishu/program/code folders, skips files still
+      downloading, never deletes) + undo_organise; type_text (clipboard +
+      Ctrl+V into the window behind Rishu, never terminals, R2) and
+      copy_to_clipboard; deadline_add/deadlines/deadline_done (encrypted,
+      reminders 9 AM the day before and on the day; Hindi day words);
+      make_invoice (numbered INV-year-001, GST, Indian number format, amount in
+      words); morning_briefing (classes, reminders, deadlines, weather);
+      meeting_start/meeting_stop (R2, microphone in 60 s parts → Groq speech
+      to text, transcript saved in Documents/Rishu/Meetings, then notes).
+      LinkedIn: draft → copy_to_clipboard → open the share box; Rishu never posts.
 
 ## Phase 0 — Setup
 
@@ -331,6 +346,9 @@ Published **v0.1.0** (Windows installer). Added for the demo, ahead of their pha
 See spec §14. Break each phase into checklist items here when it starts.
 
 ## Needs device test (cannot be verified in the cloud workspace)
+
+- Dictation (type_text) into Word/Notepad/Chrome on a real desktop: focus
+  switch and Ctrl+V; meeting recording for 30+ minutes with a real Groq key.
 
 - Phase 1 on Windows with a real key: `scripts\dev.ps1`, then "Chrome kholo",
   "notepad kholo", "AI news search karo", "gitm.edu.in kholo". Check that apps

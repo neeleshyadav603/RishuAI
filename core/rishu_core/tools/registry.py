@@ -87,6 +87,8 @@ class ToolRegistry:
         self.teach: Any = None
         self.contacts: Any = None
         self.timetable: Any = None
+        self.meeting: Any = None
+        self.deadlines: Any = None
 
     def register(self, tool: Tool) -> None:
         if tool.name in self._tools:

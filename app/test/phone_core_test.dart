@@ -148,7 +148,7 @@ void main() {
   }
 
   test('hello says phone, lists providers without keys', () async {
-    final core = make(FakeHttp([]));
+    make(FakeHttp([]));
     final seen = <Map<String, dynamic>>[];
     final sub = events.listen(seen.add);
     await Future<void>.delayed(const Duration(milliseconds: 50));
