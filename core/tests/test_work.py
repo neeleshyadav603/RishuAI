@@ -87,6 +87,23 @@ def test_unreadable_files_say_why(tmp_path):
     assert not work.read_document(str(tmp_path / "bad.pdf")).ok
 
 
+def test_submissions_are_read_a_few_at_a_time(tmp_path):
+    from docx import Document
+
+    for i in range(7):
+        doc = Document()
+        doc.add_paragraph(f"Answer of student {i}: " + "testing " * 600)
+        doc.save(tmp_path / f"Student{i}.docx")
+    (tmp_path / "notes.exe").write_bytes(b"MZ")
+    first = work.read_submissions(str(tmp_path), count=5)
+    assert first.ok and first.untrusted and "Submissions 1-5 of 7" in first.content
+    assert "=== Student0.docx ===" in first.content and "start=5" in first.content
+    assert len(first.content) < 5 * 2700
+    last = work.read_submissions(str(tmp_path), start=5)
+    assert "Student6.docx" in last.content and "last one" in last.content
+    assert not work.read_submissions(str(tmp_path / "none")).ok
+
+
 def test_read_document_is_registered_as_untrusted(registry):
     tool = registry.get("read_document")
     assert tool.risk == Risk.R0 and tool.untrusted_output

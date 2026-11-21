@@ -95,6 +95,7 @@ class PhoneCore implements CoreConnection {
   final List<Map<String, dynamic>> _history = [];
   final Map<String, Completer<bool>> _waiting = {};
   final Set<String> _keyed = {};
+  final List<Map<String, dynamic>> _activity = []; // this session's actions, oldest first
   bool _busy = false;
   bool _stopped = false;
   int _ids = 0;
@@ -242,7 +243,7 @@ class PhoneCore implements CoreConnection {
       return {'providers': await _providers()};
     }
     if (route == 'GET /v1/voice') return {'input': true, 'output': true};
-    if (route == 'GET /v1/activity') return {'items': []};
+    if (route == 'GET /v1/activity') return {'entries': List.of(_activity)};
     if (route == 'GET /v1/local-model') return {'engine': false, 'downloaded': false};
     throw const HttpException('Yeh laptop wale Rishu ka kaam hai (phone par nahi).');
   }
@@ -430,6 +431,7 @@ class PhoneCore implements CoreConnection {
       _waiting.remove(callId);
       if (!approved) {
         _emit({'type': 'tool_progress', 'call_id': callId, 'tool': name, 'status': 'denied', 'message': preview});
+        _log(name, preview, tool.risk, 'denied', false);
         return 'DENIED: the user did not approve. Do not try again.';
       }
     }
@@ -444,8 +446,14 @@ class PhoneCore implements CoreConnection {
       result = 'Failed: $e';
     }
     _emit({'type': 'tool_result', 'call_id': callId, 'ok': ok, 'summary': result.length > 140 ? '${result.substring(0, 140)}…' : result});
+    _log(name, preview, tool.risk, tool.risk >= 2 ? 'approved' : 'auto', ok);
     _state('thinking');
     return result;
+  }
+
+  void _log(String tool, String args, int risk, String approval, bool ok) {
+    _activity.add({'ts': _now().millisecondsSinceEpoch / 1000, 'tool': tool, 'args': args, 'risk': 'R$risk', 'approval': approval, 'ok': ok});
+    if (_activity.length > 200) _activity.removeAt(0);
   }
 
   // ---- tools ----------------------------------------------------------------------

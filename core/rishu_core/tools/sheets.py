@@ -115,6 +115,18 @@ class Table:
             ]
         self.header_index = self._find_header()
 
+    @classmethod
+    def from_rows(cls, rows: list[list[str]], name: str = "Google Sheet") -> Table:
+        """A table that is not a file (a Google Sheet read through the browser)."""
+        table = cls.__new__(cls)
+        table.path = Path(name)
+        table.kind = ".gsheet"
+        table.sheet_name = ""
+        table._wb = table._ws = None
+        table.rows = [[str(c).strip() for c in row] for row in rows]
+        table.header_index = table._find_header()
+        return table
+
     @property
     def sheets(self) -> list[str]:
         return list(self._wb.sheetnames) if self._wb is not None else []
@@ -229,6 +241,9 @@ def match_row(who: str, table: Table, name_col: int | None, roll_col: int | None
     who_n = _norm(who)
     if not who_n:
         return []
+    # "roll 12" / "roll no 12" means the roll number ending in 12.
+    if spoken := re.fullmatch(r"(?:roll(?: no| number| num)?|rno)\s*(\d+)", who_n):
+        who_n = spoken.group(1)
     rows = table.data_rows()
 
     def cell(row: list[str], col: int | None) -> str:
@@ -284,7 +299,12 @@ def plan_fill(
     path: str, column: str, values: dict[str, Any], sheet: str = "", match_column: str = ""
 ) -> dict[str, Any]:
     """Work out which row each value goes to, without writing anything."""
-    table = Table(Path(path).expanduser(), sheet)
+    return plan_table(Table(Path(path).expanduser(), sheet), column, values, match_column)
+
+
+def plan_table(
+    table: Table, column: str, values: dict[str, Any], match_column: str = ""
+) -> dict[str, Any]:
     name_col, roll_col = table.key_columns()
     if match_column:
         col = table.column(match_column)

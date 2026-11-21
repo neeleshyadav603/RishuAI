@@ -230,6 +230,9 @@ void main() {
     await done.future.timeout(const Duration(seconds: 5));
     await sub.cancel();
     expect(actions.done.single, startsWith('url https://wa.me/919000000000?text='));
+    final log = (await core.request('GET', '/v1/activity?limit=200'))['entries'] as List;
+    expect(log.single['tool'], 'whatsapp_message');
+    expect(log.single['approval'], 'approved');
   });
 
   test('a denied call is not run', () async {

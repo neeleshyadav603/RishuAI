@@ -74,8 +74,12 @@ P4 — Lexyta LMS (lms.lexyta.com) — page structure in `docs/lms/lexyta.md`
       stand-in page with Lexyta's structure (45 made-up students, 3 pages).
 - [ ] Enter assignment / sessional marks — needs the gradebook pages (asked in
       `docs/NEEDS_USER.md`).
-- [ ] Check Word submissions: suggest marks within the owner's range with a
+- [x] Check Word submissions: suggest marks within the owner's range with a
       one-line reason; one approval for the whole table, then enter.
+      Done for submissions saved on the laptop: read_submissions (Word/PDF in a
+      folder, 5 at a time, short excerpts, untrusted) → marks table → one
+      approval → sheet_fill / gsheet_fill. Entering marks in Lexyta itself
+      still needs the gradebook pages (or teach mode).
 
 P5 — Sheets, Excel, CSV and register photos
 - [x] Read and fill .xlsx/.csv (attendance, marks), fuzzy name matching
@@ -89,7 +93,14 @@ P5 — Sheets, Excel, CSV and register photos
       Done: read_image (photo shrunk with System.Drawing on Windows, sent to
       the Groq vision model, result untrusted) → Rishu shows what it read →
       the user confirms → sheet_fill (next turn, normal R2 approval).
-- [ ] Google Sheets through the browser tools (P2).
+- [x] Google Sheets through the browser tools (P2).
+      Done: `tools/gsheets.py` — gsheet_read (CSV export fetched inside the
+      sheet page in Rishu's signed-in browser; gviz CSV as fallback; no API
+      key or Cloud project) and gsheet_fill (R2; same matching and preview as
+      sheet_fill; cells reached through the Name Box and typed; a missing
+      column is added; the sheet is read back and every cell is confirmed).
+      "roll 12" now matches roll numbers ending in 12 in every sheet tool.
+      Needs device test: a real Google Sheet (Name Box selector, typing speed).
 
 P6 — WhatsApp and email on command
 - [x] WhatsApp Desktop: "Shruti ko bolo aaj nahi aa sakta" → open her chat by

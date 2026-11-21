@@ -18,6 +18,7 @@ from . import (
     browser,
     comms,
     contacts,
+    gsheets,
     lexyta,
     memory,
     notes,
@@ -484,6 +485,7 @@ def build_registry(
     browser.register(registry, registry.browser, vision_ask)
     registry.teach = teach.register(registry, registry.browser, SkillStore(folder / "skills.json"))
     lexyta.register(registry, registry.browser)
+    _register_gsheets(registry, gsheets.GoogleSheets(registry.browser))
     _register_files(registry, folder, controls, vision_ask)
     _register_teacher(registry, folder, now, open_uri)
     _register_work(registry, folder, now, http_transport, typist)
@@ -767,6 +769,26 @@ def _register_work(
     )
     registry.register(
         Tool(
+            name="read_submissions",
+            description=(
+                "Read students' submissions (Word/PDF files) in a folder, a few at a time, to check and grade "
+                "them. Call again with the next start until all are read."
+            ),
+            parameters=_obj(
+                {
+                    "folder": {"type": "string"},
+                    "start": {"type": "integer"},
+                    "count": {"type": "integer"},
+                },
+                ["folder"],
+            ),
+            risk=Risk.R0,
+            handler=lambda folder, start=0, count=5: work.read_submissions(folder, start, count),
+            untrusted_output=True,
+        )
+    )
+    registry.register(
+        Tool(
             name="organise_folder",
             description=(
                 "Tidy a folder (Downloads, Desktop, Documents or a path) into sub-folders by type: Documents, "
@@ -998,5 +1020,51 @@ def _register_work(
             handler=meeting.stop,
             untrusted_output=True,
             preview_fn=lambda a: "Stop the meeting recording and turn it into text",
+        )
+    )
+
+
+def _register_gsheets(registry: ToolRegistry, sheets: gsheets.GoogleSheets) -> None:
+    """Google Sheets in Rishu's browser window (the user signs in there once)."""
+    url = {
+        "type": "string",
+        "description": "The sheet's address: https://docs.google.com/spreadsheets/d/…",
+    }
+    registry.register(
+        Tool(
+            name="gsheet_read",
+            description="Read a Google Sheet (attendance, marks) in Rishu's browser, where the user is signed in to Google.",
+            parameters=_obj({"url": url, "limit": {"type": "integer"}}, ["url"]),
+            risk=Risk.R1,
+            handler=lambda url, limit=40: gsheets.read_tool(sheets, url, limit),
+            untrusted_output=True,
+            preview_fn=lambda a: "Read the Google Sheet in Rishu's browser",
+        )
+    )
+    registry.register(
+        Tool(
+            name="gsheet_fill",
+            description=(
+                "Fill one column of a Google Sheet by person, like sheet_fill: values maps a name or roll number "
+                "to the value (e.g. {'Aryan': 'P', 'roll 12': 'A'}). A missing column is added. Every cell is "
+                "checked afterwards. Call once with everyone."
+            ),
+            parameters=_obj(
+                {
+                    "url": url,
+                    "column": {
+                        "type": "string",
+                        "description": "Column title, e.g. '21 Nov' or 'Sessional 1'",
+                    },
+                    "values": {"type": "object"},
+                    "match_column": {"type": "string"},
+                },
+                ["url", "column", "values"],
+            ),
+            risk=Risk.R2,
+            handler=lambda url, column, values, match_column="": gsheets.fill_tool(
+                sheets, url, column, values, match_column
+            ),
+            preview_fn=lambda a: gsheets.preview(sheets, a),
         )
     )
