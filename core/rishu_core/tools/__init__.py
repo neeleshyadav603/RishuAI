@@ -25,6 +25,7 @@ from . import (
     sheets,
     system,
     teach,
+    teacher,
     vision,
     weather,
     web,
@@ -482,6 +483,7 @@ def build_registry(
     registry.teach = teach.register(registry, registry.browser, SkillStore(folder / "skills.json"))
     lexyta.register(registry, registry.browser)
     _register_files(registry, folder, controls, vision_ask)
+    _register_teacher(registry, folder, now, open_uri)
     return registry
 
 
@@ -559,5 +561,175 @@ def _register_files(
                 path, question, controls.shrink_image, vision_ask, folder / "tmp"
             ),
             untrusted_output=True,
+        )
+    )
+
+
+OPENABLE = (
+    ".docx",
+    ".doc",
+    ".xlsx",
+    ".xls",
+    ".csv",
+    ".pptx",
+    ".ppt",
+    ".pdf",
+    ".txt",
+    ".md",
+    ".odt",
+    ".ods",
+    ".odp",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".mp3",
+    ".mp4",
+    ".mkv",
+    ".wav",
+)
+
+
+def _register_teacher(
+    registry: ToolRegistry,
+    folder: Path,
+    now: Callable[[], datetime],
+    open_uri: Callable[[str], bool],
+) -> None:
+    """Timetable, lecture reminders and class material files."""
+    table = teacher.Timetable(folder / "timetable.json", now=now)
+    registry.timetable = table
+    entry = {
+        "type": "object",
+        "properties": {
+            "day": {"type": "string", "description": "monday … sunday (or somvar … ravivar)"},
+            "start": {"type": "string", "description": "e.g. 9:30 or 2 pm"},
+            "end": {"type": "string"},
+            "subject": {"type": "string"},
+            "group": {"type": "string", "description": "Class/section, e.g. B.Tech CSE 5 A"},
+            "room": {"type": "string"},
+        },
+        "required": ["day", "start", "subject"],
+    }
+
+    def add(entries: list, replace: bool = False) -> ToolResult:
+        added, problems = table.add([e for e in entries if isinstance(e, dict)], replace)
+        text = (
+            f"Saved {len(added)} classes"
+            + (" (the old timetable was replaced)" if replace else "")
+            + "."
+        )
+        if problems:
+            text += " " + "; ".join(problems)
+        return ToolResult(bool(added), text)
+
+    registry.register(
+        Tool(
+            name="timetable_add",
+            description=(
+                "Save the user's weekly class timetable (one entry per lecture). Rishu then answers "
+                "'aaj kaunsi class hai' and reminds the user before each lecture. replace=true replaces the whole timetable."
+            ),
+            parameters=_obj(
+                {"entries": {"type": "array", "items": entry}, "replace": {"type": "boolean"}},
+                ["entries"],
+            ),
+            risk=Risk.R1,
+            handler=add,
+            preview_fn=lambda a: f"Save {len(a.get('entries') or [])} classes in the timetable",
+        )
+    )
+    registry.register(
+        Tool(
+            name="timetable_show",
+            description="The user's classes for a day: 'today' (default), 'tomorrow', a weekday, or 'week'.",
+            parameters=_obj({"day": {"type": "string"}}),
+            risk=Risk.R0,
+            handler=lambda day="": teacher.show(table, day, now),
+        )
+    )
+    registry.register(
+        Tool(
+            name="timetable_remove",
+            description="Remove classes from the timetable: all of a day, or the one starting at a time.",
+            parameters=_obj({"day": {"type": "string"}, "start": {"type": "string"}}, ["day"]),
+            risk=Risk.R1,
+            handler=lambda day, start="": ToolResult(
+                True, f"Removed {table.remove(day, start)} classes."
+            ),
+        )
+    )
+    registry.register(
+        Tool(
+            name="make_document",
+            description=(
+                "Create a Word (.docx) file in Documents/Rishu: class notes, a question paper, a quiz with an "
+                "answer key, a letter. content is simple markdown (# headings, - bullets, 1. numbers, **bold**, | tables |)."
+            ),
+            parameters=_obj(
+                {
+                    "title": {"type": "string"},
+                    "content": {"type": "string"},
+                    "file_name": {"type": "string"},
+                },
+                ["title", "content"],
+            ),
+            risk=Risk.R1,
+            handler=lambda title, content, file_name="": teacher.make_document(
+                title, content, file_name
+            ),
+            preview_fn=lambda a: (
+                f"Create the Word file '{a.get('file_name') or a.get('title', '')}' in Documents/Rishu"
+            ),
+        )
+    )
+    registry.register(
+        Tool(
+            name="make_spreadsheet",
+            description="Create an Excel (.xlsx) file in Documents/Rishu, e.g. a result sheet or attendance summary.",
+            parameters=_obj(
+                {
+                    "title": {"type": "string"},
+                    "columns": {"type": "array", "items": {"type": "string"}},
+                    "rows": {
+                        "type": "array",
+                        "items": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "file_name": {"type": "string"},
+                },
+                ["title", "columns", "rows"],
+            ),
+            risk=Risk.R1,
+            handler=lambda title, columns, rows, file_name="": teacher.make_spreadsheet(
+                title, columns, rows, file_name
+            ),
+            preview_fn=lambda a: (
+                f"Create the Excel file '{a.get('file_name') or a.get('title', '')}' in Documents/Rishu"
+            ),
+        )
+    )
+
+    def open_file(path: str) -> ToolResult:
+        target = Path(path).expanduser()
+        if not target.is_file():
+            return ToolResult(False, f"File not found: {path}. Use find_files.")
+        if target.suffix.lower() not in OPENABLE:
+            return ToolResult(
+                False,
+                "Rishu opens documents, sheets, slides, PDFs, pictures and media only, not programs.",
+            )
+        if not open_uri(str(target)):
+            return ToolResult(False, "Could not open the file.")
+        return ToolResult(True, f"Opened {target.name}.")
+
+    registry.register(
+        Tool(
+            name="open_file",
+            description="Open a document, sheet, presentation, PDF, picture or media file on this computer (not programs).",
+            parameters=_obj({"path": {"type": "string"}}, ["path"]),
+            risk=Risk.R1,
+            handler=open_file,
+            preview_fn=lambda a: f"Open {a.get('path', '')}",
         )
     )

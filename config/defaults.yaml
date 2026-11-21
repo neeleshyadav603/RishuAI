@@ -56,3 +56,6 @@ voice:
 security:
   # Lock Rishu after this many minutes without use (only when a PIN is set; 0 = never).
   idle_minutes: 10
+
+# Teacher mode: speak this many minutes before each lecture in the timetable (0 = off).
+lecture_reminder_minutes: 10

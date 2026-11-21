@@ -53,7 +53,8 @@ providers:
     # Only these tools are offered to the small model (short prompt = fast on a CPU).
     tools_allow: [get_time, open_app, open_url, play_youtube, browser_search, set_reminder, list_reminders,
                   cancel_reminder, weather, add_note, list_notes, remember, list_memories, volume, battery_status,
-                  screenshot, lock_computer, whatsapp_send, whatsapp_draft, email_draft, list_skills]
+                  screenshot, lock_computer, whatsapp_send, whatsapp_draft, email_draft, list_skills,
+                  timetable_show, open_file, find_files]
     models:
       fast: []
       smart: []

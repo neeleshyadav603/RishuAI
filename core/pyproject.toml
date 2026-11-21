@@ -14,8 +14,9 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn>=0.30",
     "websockets>=13.0",
-    # Excel files for attendance and marks (MIT).
+    # Excel files for attendance and marks, Word files for notes and papers (MIT).
     "openpyxl>=3.1",
+    "python-docx>=1.1",
 ]
 
 [project.optional-dependencies]

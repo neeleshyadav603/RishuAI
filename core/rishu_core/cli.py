@@ -178,6 +178,21 @@ def voicetest() -> int:
             print(f"windows hello check: exit {code}, {answer or '(no output)'} {hello.last_error}")
         except Exception as exc:  # noqa: BLE001 - report, do not fail the voice test
             print(f"windows hello check: FAILED ({exc})")
+        # Packaged libraries for teacher files (python-docx needs its template).
+        from .tools import teacher
+
+        try:
+            word = teacher.make_document(
+                "Rishu check", "# Heading\n- point\n| a | b |\n| 1 | 2 |", folder=Path(tmp)
+            )
+            excel = teacher.make_spreadsheet(
+                "Rishu check", ["Roll", "Marks"], [["1", "9"]], folder=Path(tmp)
+            )
+            print(f"word and excel files: {'ok' if word.ok and excel.ok else 'FAILED'}")
+            ok = ok and word.ok and excel.ok
+        except Exception as exc:  # noqa: BLE001
+            print(f"word and excel files: FAILED ({exc})")
+            ok = False
     print("voicetest ok" if ok else "voicetest FAILED")
     return 0 if ok else 1
 

@@ -322,9 +322,35 @@ class CoreRuntime:
         while not stop.wait(interval):
             try:
                 self.check_reminders()
+                self.check_lectures()
                 self.check_idle_lock()
             except Exception:  # noqa: BLE001, S110 - keep the loop alive
                 pass
+
+    def check_lectures(self) -> int:
+        """Say a few minutes before each lecture in the timetable that it is coming."""
+        table = getattr(self.registry, "timetable", None)
+        session = self.active_session
+        if table is None or session is None or self.lock.locked:
+            return 0
+        minutes = int(self.settings().defaults.get("lecture_reminder_minutes", 10) or 0)
+        if minutes <= 0:
+            return 0
+        due = table.due_soon(minutes)
+        for lecture in due:
+            where = ", ".join(
+                x
+                for x in (
+                    lecture.get("group"),
+                    f"room {lecture['room']}" if lecture.get("room") else "",
+                )
+                if x
+            )
+            text = f"{lecture['in_minutes']} minute mein {lecture['subject']} ki class hai" + (
+                f" ({where})" if where else ""
+            )
+            session.deliver_reminder(text)
+        return len(due)
 
     # ---- lock ------------------------------------------------------------------
 

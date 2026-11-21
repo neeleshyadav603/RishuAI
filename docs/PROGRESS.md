@@ -124,8 +124,15 @@ P7 — Small local model (works on low-end laptops, no key, no limit)
       Needs device test: real download and speed on a 4–8 GB laptop.
 
 P8 — Teacher mode
-- [ ] Weekly timetable, "aaj kaunsi class hai", reminder before each lecture.
-- [ ] Notes, quiz, question paper and result sheet as Word/Excel files.
+- [x] Weekly timetable, "aaj kaunsi class hai", reminder before each lecture.
+      Done: `tools/teacher.py` Timetable (encrypted; Hindi day names; "2 baje"
+      means 14:00), timetable_add/show/remove, spoken reminder
+      `lecture_reminder_minutes` (10) before each lecture, once per day.
+- [x] Notes, quiz, question paper and result sheet as Word/Excel files.
+      Done: make_document (markdown → .docx with headings, lists, bold,
+      tables; python-docx, MIT), make_spreadsheet (.xlsx with header, sized
+      columns, numbers kept numeric), files in Documents/Rishu, never
+      overwritten; open_file opens documents and media but never programs.
 
 P9 — Android app
 - [ ] Talk to Rishu, reminders, open apps, WhatsApp on the phone; send a command

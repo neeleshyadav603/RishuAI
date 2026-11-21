@@ -282,9 +282,8 @@ void main() {
     await tester.ensureVisible(find.byKey(const ValueKey('about-me')));
     await tester.pump();
     await tester.enterText(find.byKey(const ValueKey('about-me')), 'Main GITM mein padhata hoon.');
-    await tester.ensureVisible(find.byKey(const ValueKey('save-about-me')));
-    await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('save-about-me')));
+    // Press the button directly: near the bottom edge a tap can land on a snack bar.
+    tester.widget<FilledButton>(find.byKey(const ValueKey('save-about-me'))).onPressed!();
     await tester.pump(const Duration(milliseconds: 300));
     expect(core.bodies.last, {'about_me': 'Main GITM mein padhata hoon.'});
   });
