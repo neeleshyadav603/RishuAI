@@ -176,3 +176,70 @@ def test_router_falls_back_to_the_offline_model_with_fewer_tools():
     assert [
         p.name for p in LLMRouter.from_settings(cfg, env={"K": "x"}, transport=transport).providers
     ] == ["groq"]
+
+
+def test_bundled_model_is_found_and_never_deleted(tmp_path):
+    server = tmp_path / "local-llm" / "llama-server.exe"
+    (tmp_path / "local-llm" / "models").mkdir(parents=True)
+    server.write_text("x")
+    bundled = tmp_path / "local-llm" / "models" / "Qwen3-0.6B-Q4_K_M.gguf"
+    bundled.write_bytes(BLOB)
+    model = LocalModel(tmp_path / "home", CFG, server=lambda: server, sleep=lambda s: None)
+    status = model.status()
+    assert status["downloaded"] is True and status["bundled"] is True
+    model.delete()
+    assert bundled.exists()
+
+
+def test_compact_prompt_is_used_only_for_small_local_models():
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/models"):
+            return httpx.Response(200, json={"data": [{"id": "qwen3-0.6b"}]})
+        seen.append(json.loads(request.content)["messages"][0]["content"])
+        return httpx.Response(
+            200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+        )
+
+    cfg = {
+        "order": ["rishu_local"],
+        "providers": {
+            "rishu_local": {
+                "base_url": "http://127.0.0.1:1/v1",
+                "local": True,
+                "managed": True,
+                "compact_prompt": True,
+                "models": {},
+            }
+        },
+    }
+    router = LLMRouter.from_settings(
+        cfg,
+        env={},
+        transport=httpx.MockTransport(handler),
+        managed={"rishu_local": lambda: "http://127.0.0.1:5/v1"},
+    )
+    router.compact = lambda msgs: [{**msgs[0], "content": "SHORT"}, *msgs[1:]]
+    router.chat(
+        "fast",
+        [{"role": "system", "content": "LONG RULES"}, {"role": "user", "content": "hi"}],
+        None,
+    )
+    assert seen == ["SHORT"]
+
+
+def test_runtime_swaps_the_long_rules_for_the_short_ones(settings, registry, tmp_path):
+    from test_api import make_runtime
+
+    from rishu_core.agent.factory import build_system_prompt
+    from rishu_core.config import read_prompt
+
+    runtime = make_runtime(settings, registry, tmp_path, script=[])
+    prompt = build_system_prompt(settings)
+    compact = runtime._compact_messages(
+        [{"role": "system", "content": prompt}, {"role": "user", "content": "x"}]
+    )
+    short = compact[0]["content"]
+    assert read_prompt("system_rules_compact") in short and read_prompt("system_rules") not in short
+    assert len(short) < len(prompt) * 0.75

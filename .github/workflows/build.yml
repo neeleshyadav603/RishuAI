@@ -171,6 +171,13 @@ jobs:
           else
             echo "::warning::llama.cpp server could not be downloaded; this build has no offline model engine"
           fi
+      - name: Bundle the small offline model (Qwen3, Apache-2.0)
+        shell: bash
+        run: |
+          # Rishu works from the first start without internet or a key.
+          python scripts/fetch_model.py --choice small --out dist/rishu-core/local-llm/models \
+            || echo "::warning::the offline model could not be downloaded; the user can download it in Settings"
+          ls -la dist/rishu-core/local-llm/models || true
       - name: Smoke-test the packaged core
         env:
           RISHU_HOME: ${{ runner.temp }}/rishu-home
@@ -178,6 +185,14 @@ jobs:
           # --selftest also starts the local server and runs a turn over WebSocket.
           dist/rishu-core/rishu-core.exe --selftest
           dist/rishu-core/rishu-core.exe --offline --once "Rishu, time kya hua hai?"
+      - name: Offline model check of the packaged core
+        if: hashFiles('dist/rishu-core/local-llm/models/*.gguf') != ''
+        env:
+          RISHU_HOME: ${{ runner.temp }}/rishu-home
+        run: |
+          # The bundled llama.cpp server with the bundled model answers a question (no key, no internet needed).
+          dist/rishu-core/rishu-core.exe --localtest | tee localtest.txt
+          { echo '### Offline model check'; echo '```'; cat localtest.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Voice check of the packaged core
         env:
           RISHU_HOME: ${{ runner.temp }}/rishu-home

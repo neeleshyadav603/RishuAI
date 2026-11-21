@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 from typing import Any
 
 from .agent import ApprovalRequest, build_agent
@@ -204,6 +205,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--offline", action="store_true", help="do not contact any LLM provider")
     parser.add_argument("--selftest", action="store_true", help="check that this build is complete")
     parser.add_argument("--voicetest", action="store_true", help="check the voice parts (Windows)")
+    parser.add_argument(
+        "--localtest", action="store_true", help="ask the bundled offline model one question"
+    )
     parser.add_argument("--serve", action="store_true", help="run the local server for the app")
     parser.add_argument("--port", type=int, default=0, help="server port (0 picks a free one)")
     parser.add_argument(
@@ -224,6 +228,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.selftest:
         return selftest()
+    if args.localtest:
+        return _localtest()
     if args.voicetest:
         return voicetest()
     if args.serve:
@@ -263,3 +269,45 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def _localtest() -> int:
+    """CI on Windows: the installer's offline model really answers (no key, no internet)."""
+    import tempfile
+    import time
+
+    from .config import load_settings
+    from .llm.local import LocalModel
+    from .llm.openai_compat import OpenAICompatClient
+
+    settings = load_settings()
+    with tempfile.TemporaryDirectory() as tmp:
+        model = LocalModel(Path(tmp), settings.models.get("local_model") or {})
+        status = model.status()
+        print(
+            f"engine: {status['engine']}, model: {status['downloaded']} (bundled: {status['bundled']})"
+        )
+        started = time.monotonic()
+        url = model.ensure()
+        if not url:
+            print(f"localtest FAILED: {model.error or 'not available'}")
+            return 1
+        print(f"server ready in {time.monotonic() - started:.1f} s at {url}")
+        try:
+            client = OpenAICompatClient("rishu_local", url, None)
+            ids = client.list_models()
+            started = time.monotonic()
+            reply = client.chat(
+                ids[0] if ids else "local",
+                [{"role": "user", "content": "Say hello in one short sentence."}],
+                None,
+            )
+            print(f"reply in {time.monotonic() - started:.1f} s: {reply.content!r}")
+            ok = bool((reply.content or "").strip())
+        except Exception as exc:  # noqa: BLE001 - report
+            print(f"localtest FAILED: {exc}")
+            ok = False
+        finally:
+            model.stop()
+    print("localtest ok" if ok else "localtest FAILED")
+    return 0 if ok else 1

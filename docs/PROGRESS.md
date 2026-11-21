@@ -139,6 +139,18 @@ bundles llama.cpp's CPU server, ≈47 MB).
 
 Release: P9 part 1 (phone link + Android app) shipped as **v0.6.0** with the APK.
 
+Owner request (21 Nov evening): "local model daal do, independent chale, sab kaam
+ek saath" → bundle the small model in the installer, phone works on its own
+with Groq/free keys (no model on the phone), remaining P9/P10 items, one release.
+- [x] The Windows installer ships Qwen3 0.6B (≈0.5 GB, stored uncompressed in
+      the installer) next to llama.cpp's server: Rishu answers from the first
+      start without a key or internet (`scripts/fetch_model.py` in CI, size and
+      SHA-256 checked; `--localtest` asks it a real question on the Windows
+      runner). The server warms up at start when no online key is saved; the
+      small model gets a short rules prompt (`system_rules_compact.md`) and 24
+      everyday tools; context 6144. The bundled file cannot be deleted from
+      Settings; the 1.7B model is still an optional download.
+
 P9 — Android app
 - [ ] Talk to Rishu, reminders, open apps, WhatsApp on the phone; send a command
       to the laptop Rishu (LMS and other heavy work run on the laptop).

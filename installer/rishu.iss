@@ -33,7 +33,9 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
 
 [Files]
 Source: "..\app\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
-Source: "..\dist\rishu-core\*"; DestDir: "{app}\core"; Flags: recursesubdirs ignoreversion
+Source: "..\dist\rishu-core\*"; DestDir: "{app}\core"; Excludes: "*.gguf"; Flags: recursesubdirs ignoreversion
+; The offline model (~0.5 GB) is already compressed: store it as is (much faster setup builds).
+Source: "..\dist\rishu-core\local-llm\models\*.gguf"; DestDir: "{app}\core\local-llm\models"; Flags: ignoreversion nocompression skipifsourcedoesntexist
 
 [Icons]
 Name: "{group}\Rishu"; Filename: "{app}\rishu.exe"

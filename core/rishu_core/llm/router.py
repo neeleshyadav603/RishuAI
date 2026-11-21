@@ -55,6 +55,8 @@ class LLMRouter:
         self.providers = providers
         self._clock = clock
         self._cooldown = cooldown_seconds
+        # Optional: makes a shorter prompt for providers marked compact_prompt.
+        self.compact: Callable[[list[dict[str, Any]]], list[dict[str, Any]]] | None = None
 
     @classmethod
     def from_settings(
@@ -87,6 +89,8 @@ class LLMRouter:
             state = ProviderState(name=name, client=client, models=models, local=local)
             if cfg.get("tools_allow"):
                 state.extra["tools_allow"] = set(cfg["tools_allow"])
+            if cfg.get("compact_prompt"):
+                state.extra["compact_prompt"] = True
             if cfg.get("managed") and managed:
                 state.extra["ensure"] = managed[name]
                 state.extra["transport"] = transport
@@ -175,6 +179,9 @@ class LLMRouter:
                 continue
             quota_hits = 0
             offered = tools
+            sent = messages
+            if state.extra.get("compact_prompt") and self.compact is not None:
+                sent = self.compact(messages)  # a shorter system prompt for small local models
             allow = state.extra.get("tools_allow")
             if tools and allow:
                 # Small local models get only the everyday tools: a short prompt is
@@ -182,7 +189,7 @@ class LLMRouter:
                 offered = [t for t in tools if t.get("function", {}).get("name") in allow] or None
             for model in models:
                 try:
-                    response = state.client.chat(model, messages, offered, stream=stream)
+                    response = state.client.chat(model, sent, offered, stream=stream)
                 except LLMError as exc:
                     # A failed attempt may have streamed part of a reply: discard
                     # it before the next model or provider starts again.

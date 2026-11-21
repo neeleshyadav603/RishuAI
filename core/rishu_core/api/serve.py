@@ -130,6 +130,8 @@ def serve(
     from ..voice.hotkey import start_hotkey
 
     runtime.hotkey_enabled = start_hotkey(runtime.hotkey_pressed)
+    if not runtime.has_cloud_key():
+        runtime.local.warm_up()  # no online key: the offline model answers, start it now
     threading.Thread(
         target=runtime.run_reminder_loop,
         args=(threading.Event(),),

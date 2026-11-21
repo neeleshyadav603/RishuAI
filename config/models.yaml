@@ -50,6 +50,7 @@ providers:
     base_url: http://127.0.0.1:1/v1  # replaced by the started server's address
     local: true
     managed: true
+    compact_prompt: true  # shared/prompts/system_rules_compact.md instead of the long rules
     # Only these tools are offered to the small model (short prompt = fast on a CPU).
     tools_allow: [get_time, open_app, open_url, play_youtube, browser_search, set_reminder, list_reminders,
                   cancel_reminder, weather, add_note, list_notes, remember, list_memories, volume, battery_status,
@@ -83,7 +84,7 @@ speech:
 # repositories on Hugging Face; the exact file is looked up when downloading).
 local_model:
   default: small
-  ctx_size: 4096
+  ctx_size: 6144
   choices:
     small:
       label: "Chhota: Qwen3 0.6B (about 0.5 GB, 4 GB RAM laptops)"

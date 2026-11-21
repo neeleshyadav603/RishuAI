@@ -88,16 +88,27 @@ class LocalModel:
             self.choice = choice
             self._publish()
 
+    def bundled_folder(self) -> Path | None:
+        """Models shipped inside the installer, next to the server program."""
+        server = self._server()
+        return server.parent / "models" if server is not None else None
+
     def model_path(self) -> Path | None:
+        """The chosen model: downloaded by the user, or shipped with Rishu."""
         spec = self._spec()
         prefix = str(spec.get("repo", "")).split("/")[-1].removesuffix("-GGUF")
         suffix = str(spec.get("file_suffix", ".gguf"))
-        if not self.folder.is_dir():
-            return None
-        for path in sorted(self.folder.glob("*.gguf")):
-            if path.name.startswith(prefix) and path.name.endswith(suffix):
-                return path
+        for folder in (self.folder, self.bundled_folder()):
+            if folder is None or not folder.is_dir():
+                continue
+            for path in sorted(folder.glob("*.gguf")):
+                if path.name.startswith(prefix) and path.name.endswith(suffix):
+                    return path
         return None
+
+    def is_bundled(self, path: Path | None) -> bool:
+        bundled = self.bundled_folder()
+        return path is not None and bundled is not None and path.parent == bundled
 
     def status(self) -> dict[str, Any]:
         path = self.model_path()
@@ -108,6 +119,7 @@ class LocalModel:
             "choice": self.choice,
             "choices": {k: str(v.get("label", k)) for k, v in self.choices().items()},
             "downloaded": path is not None,
+            "bundled": self.is_bundled(path),
             "size_mb": round(path.stat().st_size / 1e6) if path else int(spec.get("size_mb", 0)),
             "running": self._url is not None
             and self._process is not None
@@ -186,11 +198,16 @@ class LocalModel:
             self._publish()
 
     def delete(self) -> None:
-        self.stop()
+        """Delete a downloaded model (the one shipped with Rishu stays)."""
         path = self.model_path()
-        if path is not None:
+        if path is not None and not self.is_bundled(path):
+            self.stop()
             path.unlink(missing_ok=True)
         self._publish()
+
+    def warm_up(self) -> None:
+        """Start the server early (no online key): the first answer then comes sooner."""
+        threading.Thread(target=self.ensure, name="rishu-local-warmup", daemon=True).start()
 
     # ---- the server ------------------------------------------------------------------
 

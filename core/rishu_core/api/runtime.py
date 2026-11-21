@@ -257,6 +257,7 @@ class CoreRuntime:
                     transport=self._transport,
                     managed={"rishu_local": self.local.ensure},
                 )
+                self._router.compact = self._compact_messages
                 self._router_generation = self.generation
             return self._router if self._router.providers else None
 
@@ -381,6 +382,25 @@ class CoreRuntime:
             session.send_lock_state()
 
     # ---- the global shortcut ------------------------------------------------
+
+    def _compact_messages(self, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """For the small offline model: the long rules swapped for the short ones."""
+        if not messages or messages[0].get("role") != "system":
+            return messages
+        from ..config import read_prompt
+
+        root = self.base_settings.root
+        try:
+            full, short = (
+                read_prompt("system_rules", root),
+                read_prompt("system_rules_compact", root),
+            )
+        except OSError:
+            return messages
+        content = str(messages[0].get("content", ""))
+        if full not in content:
+            return messages
+        return [{**messages[0], "content": content.replace(full, short)}, *messages[1:]]
 
     def _teach_state(self) -> dict[str, Any]:
         teach = getattr(self.registry, "teach", None)

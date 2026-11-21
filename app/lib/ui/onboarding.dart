@@ -264,12 +264,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: 10),
         _body(tr(c, '🔒 Key sirf is computer par, Windows ke secure store mein encrypted rehti hai.',
             '🔒 The key stays on this computer, encrypted in the Windows secure store.')),
+        if (c.localModel.downloaded) ...[
+          const SizedBox(height: 6),
+          _body(tr(c, '💡 Key ke bina bhi Rishu chalegi: laptop par chhota offline dimaag hai (dheema aur simple). Key ke saath tez aur zyada samajhdaar.',
+              '💡 Rishu also works without a key: a small offline brain runs on this laptop (slower, simpler). With a key it is faster and smarter.')),
+        ],
         const SizedBox(height: 22),
         Row(
           children: [
             TextButton(
               onPressed: () => setState(() => _step = 3),
-              child: Text(tr(c, 'Abhi nahi (offline mode)', 'Not now (offline mode)')),
+              child: Text(c.localModel.downloaded
+                  ? tr(c, 'Bina key ke chalao (offline dimaag)', 'Continue without a key (offline brain)')
+                  : tr(c, 'Abhi nahi (offline mode)', 'Not now (offline mode)')),
             ),
             const Spacer(),
             FilledButton.icon(
