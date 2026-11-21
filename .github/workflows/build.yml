@@ -148,17 +148,26 @@ jobs:
           # The CPU build of llama.cpp's server; the model file is downloaded
           # later by the user from Settings (it is not in the installer).
           mkdir -p llama dist/rishu-core/local-llm
-          gh release view --repo ggml-org/llama.cpp --json tagName,assets --jq '.tagName, (.assets[].name)' | tee llama/assets.txt
-          # The plain CPU build for 64-bit Windows (not CUDA, Vulkan, HIP, SYCL, OpenCL or ARM).
-          asset=$(grep -E 'bin-win-(cpu-)?(avx2-)?x64\.zip$' llama/assets.txt | grep -viE 'cuda|vulkan|hip|sycl|opencl|arm64|kompute' | head -1 || true)
-          echo "chosen asset: ${asset:-none}"
-          if [ -n "$asset" ] && gh release download --repo ggml-org/llama.cpp --pattern "$asset" --dir llama; then
-            unzip -q -o llama/*.zip -d llama/unzipped
+          # Newest release that carries a plain CPU build for 64-bit Windows
+          # (llama.cpp also publishes tags without binaries, and GPU variants).
+          gh api "repos/ggml-org/llama.cpp/releases?per_page=40" \
+            --jq '.[] | .tag_name as $t | .assets[] | "\($t) \(.name) \(.browser_download_url)"' > llama/assets.txt || true
+          head -n 40 llama/assets.txt
+          line=$(grep -iE ' [^ ]*win[^ ]*x64[^ ]*\.zip ' llama/assets.txt \
+                 | grep -viE 'cuda|cudart|vulkan|hip|sycl|opencl|arm64|kompute|radeon|rocm' | head -1 || true)
+          url=$(echo "$line" | awk '{print $3}')
+          echo "chosen: ${line:-none}"
+          if [ -n "$url" ] && curl -fsSL -o llama/server.zip "$url"; then
+            unzip -q -o llama/server.zip -d llama/unzipped
             server=$(find llama/unzipped -name llama-server.exe | head -1)
-            cp "$(dirname "$server")"/*.dll "$server" dist/rishu-core/local-llm/
-            gh api repos/ggml-org/llama.cpp/contents/LICENSE --jq .content | base64 -d > dist/rishu-core/local-llm/LICENSE-llama.cpp.txt
-            ls -la dist/rishu-core/local-llm
-            dist/rishu-core/local-llm/llama-server.exe --version || true
+            if [ -n "$server" ]; then
+              cp "$(dirname "$server")"/*.dll "$server" dist/rishu-core/local-llm/
+              gh api repos/ggml-org/llama.cpp/contents/LICENSE --jq .content | base64 -d > dist/rishu-core/local-llm/LICENSE-llama.cpp.txt
+              ls -la dist/rishu-core/local-llm
+              dist/rishu-core/local-llm/llama-server.exe --version || true
+            else
+              echo "::warning::the llama.cpp download has no llama-server.exe"
+            fi
           else
             echo "::warning::llama.cpp server could not be downloaded; this build has no offline model engine"
           fi

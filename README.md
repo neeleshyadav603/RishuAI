@@ -25,13 +25,21 @@ Demo script: [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) · Progress: [docs/PROGRES
 | Apps and web | "Chrome kholo", "gitm.edu.in kholo", "YouTube pe Kesariya chalao", "Google pe GITM admission search karo" |
 | Answers with sources | "Aaj ki AI news search karo" (sources card, click to open) |
 | Teaching | "Mujhe quantum computing padhao", then ask follow-up questions |
-| Messages (you press Send) | "WhatsApp pe likho: main 10 minute late hoon", "HOD ko leave ka email draft karo" |
+| Messages | "WhatsApp pe likho: main 10 minute late hoon" (draft), "HOD ko leave ka email draft karo" |
 | Computer | "Awaaz badhao", "screenshot lo", "computer lock karo", "battery kitni hai" |
 | Reminders | "1 minute baad paani peene ka reminder lagao" (shown and spoken) |
 | Memory | "Yaad rakho: mera favourite subject DAA hai", "kya yaad hai mere baare mein?" |
 | Weather | "Gurugram ka mausam batao" |
 | Screen | "Screen par kya hai, samjhao", "yeh error kya hai?" |
 | Lock | PIN, Windows Hello or a spoken password; "Rishu lock" locks at once, auto-lock when idle |
+| Styles | Professional or Personal (warm) style; how Rishu addresses you; "About me" |
+| Websites | Works inside sites in its own Chrome/Edge window: read, click, type (you sign in yourself) |
+| Teach mode | "Ek baar karke dikha do": show a website task once, Rishu repeats it with new values |
+| College LMS | Lexyta attendance in one go: "roll 5 aur 12 absent, baaki present" |
+| Sheets and photos | Fill Excel/CSV by name or roll number; read a register photo |
+| WhatsApp | "Shruti ko bolo aaj nahi aa sakta" — sent in WhatsApp Desktop after your "haan" |
+| Teacher | Timetable with lecture reminders; notes, question papers, quizzes (Word), result sheets (Excel) |
+| Offline brain | Small model on the laptop when there is no internet or key (Settings → Offline dimaag) |
 | Safety | Permission cards before important actions, activity log, keys encrypted on this PC |
 
 ## What is in the repo

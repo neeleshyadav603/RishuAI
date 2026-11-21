@@ -2,7 +2,7 @@
 
 ## Demo se pehle (15 minute)
 
-1. GitHub Releases se `RishuSetup-0.4.0.exe` (ya jo latest ho) download karke install karo.
+1. GitHub Releases se `RishuSetup-0.5.0.exe` (ya jo latest ho) download karke install karo.
    "Unknown publisher" aaye to **More info → Run anyway**.
 2. Rishu kholo, setup poora karo: naam, bhasha, awaaz, aur **Groq API key**
    (console.groq.com/keys → Create API Key → paste → Check + Save).
@@ -32,6 +32,12 @@
 | 15b | Left mein **Kaam** (Activity) tab | Har kaam ka record: risk level, permission |
 | 16 | Settings: awaaz Ladka/Ladki badlo, "Sunao" | Awaaz turant badalti hai |
 | 16b | (Optional, shaant kamre mein) Settings → Awaaz → **Baat-cheet mode** ON. Mic dabao: "Quantum computing kya hai?" → jawab ke baad bina dabaye: "Ek example do" → "Thank you" | Mic khud khulta hai, lagataar baat-cheet; "Thank you" par Rishu band |
+| 16c | Settings → **Rishu ka andaaz** → Personal chuno (awaaz ladki ki ho jaati hai), "Rishu aapko kya bulaye" mein "Neelesh ji" | Rishu pyaar se, apnapan se baat karti hai |
+| 18 | "Rishu, main tumhe ek kaam sikhata hoon: gitm.edu.in par admission page kholna" → Rishu ki browser window mein karke dikhao → **Bas, ho gaya** | Banner mein steps dikhte hain; Settings → Seekhe hue kaam mein naya kaam |
+| 19 | Lexyta mein meeting ka attendance page Rishu ki browser window mein kholo → "roll 5 aur 12 absent, baaki present" | Permission card → saari pages par attendance lag jaati hai (lock tabhi jab bolo) |
+| 20 | Ek Excel file (naam + roll number) Downloads mein rakho → "DAA attendance file mein Aryan ke 8 aur Priya ke 9 marks bharo" | Card mein har row dikhti hai → haan → file bhar jaati hai |
+| 21 | "Mera timetable save karo: Monday 9:30 DAA CSE 5 A room 204, …" → "Aaj kaunsi class hai?" | Timetable; class se 10 minute pehle Rishu bolkar yaad dilati hai |
+| 22 | "DAA Unit 1 ke notes bana do, Word file mein" / "Sorting par 5 sawaal ka quiz answer key ke saath" | Documents\Rishu mein Word file; "khol do" bolo to khulti hai |
 | 17 | Settings → Suraksha: PIN set karo, phir bolo **"Rishu lock"** | Rishu turant lock; chat screen se hat jaati hai. PIN (ya Windows Hello / bolkar password) se unlock |
 
 ## Agar kuch gadbad ho
