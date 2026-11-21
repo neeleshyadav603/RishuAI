@@ -137,6 +137,8 @@ P8 — Teacher mode
 Release: P1–P8 shipped as **v0.5.0** (21 Nov 2026; Windows installer now
 bundles llama.cpp's CPU server, ≈47 MB).
 
+Release: P9 part 1 (phone link + Android app) shipped as **v0.6.0** with the APK.
+
 P9 — Android app
 - [ ] Talk to Rishu, reminders, open apps, WhatsApp on the phone; send a command
       to the laptop Rishu (LMS and other heavy work run on the laptop).

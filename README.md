@@ -40,6 +40,7 @@ Demo script: [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) · Progress: [docs/PROGRES
 | WhatsApp | "Shruti ko bolo aaj nahi aa sakta" — sent in WhatsApp Desktop after your "haan" |
 | Teacher | Timetable with lecture reminders; notes, question papers, quizzes (Word), result sheets (Excel) |
 | Offline brain | Small model on the laptop when there is no internet or key (Settings → Offline dimaag) |
+| Android | The phone app pairs with the laptop's Rishu (same Wi-Fi, encrypted): talk on the phone, the laptop does the work |
 | Safety | Permission cards before important actions, activity log, keys encrypted on this PC |
 
 ## What is in the repo

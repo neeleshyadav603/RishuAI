@@ -231,20 +231,27 @@ jobs:
 
   release:
     name: Publish the GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
-    # The Windows installer is the deliverable for now; an Android build problem
-    # (e.g. a Gradle repository hiccup) must not hold the Windows release back.
-    needs: [windows]
+    # The Windows installer must be ready; the Android APK is added when its
+    # build passed (a Gradle repository hiccup must not hold Windows back).
+    if: >-
+      always() && needs.windows.result == 'success' &&
+      (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
+    needs: [windows, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      # Windows only for now: the Android app needs its own on-phone core
-      # (Phase 7) before it is useful, so its APK is not published yet.
       - uses: actions/download-artifact@v4
         with:
           pattern: rishu-windows
+          path: release-files
+          merge-multiple: true
+      # The Android app connects to the laptop's Rishu (phone link).
+      - uses: actions/download-artifact@v4
+        if: needs.android.result == 'success'
+        with:
+          pattern: rishu-android
           path: release-files
           merge-multiple: true
       - name: Create or update the release

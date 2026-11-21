@@ -2,7 +2,7 @@
 
 ## Demo se pehle (15 minute)
 
-1. GitHub Releases se `RishuSetup-0.5.0.exe` (ya jo latest ho) download karke install karo.
+1. GitHub Releases se `RishuSetup-0.6.0.exe` (ya jo latest ho) download karke install karo.
    "Unknown publisher" aaye to **More info → Run anyway**.
 2. Rishu kholo, setup poora karo: naam, bhasha, awaaz, aur **Groq API key**
    (console.groq.com/keys → Create API Key → paste → Check + Save).
@@ -38,6 +38,7 @@
 | 20 | Ek Excel file (naam + roll number) Downloads mein rakho → "DAA attendance file mein Aryan ke 8 aur Priya ke 9 marks bharo" | Card mein har row dikhti hai → haan → file bhar jaati hai |
 | 21 | "Mera timetable save karo: Monday 9:30 DAA CSE 5 A room 204, …" → "Aaj kaunsi class hai?" | Timetable; class se 10 minute pehle Rishu bolkar yaad dilati hai |
 | 22 | "DAA Unit 1 ke notes bana do, Word file mein" / "Sorting par 5 sawaal ka quiz answer key ke saath" | Documents\Rishu mein Word file; "khol do" bolo to khulti hai |
+| 23 | Laptop: Settings → **Phone se jodo** → code. Phone: Rishu app → code daalo → **Jodo** → phone par bolo "Aaj kaunsi class hai?" | Laptop wala Rishu jawab deta hai, phone bolkar sunata hai |
 | 17 | Settings → Suraksha: PIN set karo, phir bolo **"Rishu lock"** | Rishu turant lock; chat screen se hat jaati hai. PIN (ya Windows Hello / bolkar password) se unlock |
 
 ## Agar kuch gadbad ho
