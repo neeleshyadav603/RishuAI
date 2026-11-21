@@ -179,8 +179,12 @@ with Groq/free keys (no model on the phone), remaining P9/P10 items, one release
       and the phone brain when not (after pairing). LMS, sheets, Word/Excel,
       teach mode and the lock stay laptop features (said in Settings).
 
+Release: everything above (bundled offline model, phone without the laptop,
+P10 work tools, Google Sheets, grading) ships together as **v0.7.0** (21 Nov 2026),
+as the owner asked ("sab kuch ek saath").
+
 P9 — Android app
-- [ ] Talk to Rishu, reminders, open apps, WhatsApp on the phone; send a command
+- [x] Talk to Rishu, reminders, open apps, WhatsApp on the phone; send a command
       to the laptop Rishu (LMS and other heavy work run on the laptop).
   - [x] Phone link (laptop side): Settings → "Phone se jodo" starts a TLS
         listener on the home Wi-Fi (self-signed certificate made on the PC,

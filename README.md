@@ -13,7 +13,12 @@ Nothing else needs to be installed (no Python). Windows may say "Unknown
 publisher" because the installer is not code-signed yet: **More info → Run anyway**.
 
 On first start Rishu asks for your name, language, voice, and a free Groq API
-key (console.groq.com). Without a key, basic offline commands still work.
+key (console.groq.com). Without a key or internet, the small offline model
+inside the installer still answers simple requests. The installer is about
+0.5 GB because that model is inside it.
+
+Android: get the `.apk` from the same Release. Pair it with the laptop, or
+choose "Laptop ke bina chalao" and add a free Groq key on the phone.
 
 Demo script: [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) · Progress: [docs/PROGRESS.md](docs/PROGRESS.md)
 
@@ -39,8 +44,12 @@ Demo script: [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) · Progress: [docs/PROGRES
 | Sheets and photos | Fill Excel/CSV by name or roll number; read a register photo |
 | WhatsApp | "Shruti ko bolo aaj nahi aa sakta" — sent in WhatsApp Desktop after your "haan" |
 | Teacher | Timetable with lecture reminders; notes, question papers, quizzes (Word), result sheets (Excel) |
-| Offline brain | Small model on the laptop when there is no internet or key (Settings → Offline dimaag) |
-| Android | The phone app pairs with the laptop's Rishu (same Wi-Fi, encrypted): talk on the phone, the laptop does the work |
+| Offline brain | A small model is inside the installer: Rishu answers without internet or a key (slower, simple tasks) |
+| Android | Pairs with the laptop's Rishu (same Wi-Fi, encrypted), or works on its own with a free Groq key: alarms, timers, apps, YouTube, WhatsApp, search, weather |
+| Everyday work | PDF/Word/Excel/PowerPoint summaries, tidy Downloads (with undo), dictation into any app, morning briefing, meeting notes, LinkedIn drafts |
+| Freelancing | Invoices with GST and amount in words, deadlines with reminders, proposals as Word files |
+| Google Sheets | Read and fill attendance or marks in a Google Sheet by name or roll number (checked after writing) |
+| Grading | Read students' Word/PDF submissions, suggest marks in your range, fill the sheet after your "haan" |
 | Safety | Permission cards before important actions, activity log, keys encrypted on this PC |
 
 ## What is in the repo

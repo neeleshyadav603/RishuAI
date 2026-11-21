@@ -39,6 +39,14 @@
 | 21 | "Mera timetable save karo: Monday 9:30 DAA CSE 5 A room 204, …" → "Aaj kaunsi class hai?" | Timetable; class se 10 minute pehle Rishu bolkar yaad dilati hai |
 | 22 | "DAA Unit 1 ke notes bana do, Word file mein" / "Sorting par 5 sawaal ka quiz answer key ke saath" | Documents\Rishu mein Word file; "khol do" bolo to khulti hai |
 | 23 | Laptop: Settings → **Phone se jodo** → code. Phone: Rishu app → code daalo → **Jodo** → phone par bolo "Aaj kaunsi class hai?" | Laptop wala Rishu jawab deta hai, phone bolkar sunata hai |
+| 24 | Wi-Fi band karo (ya koi key mat daalo) → "Time kya hua hai?" / "Note likho: kal 10 baje meeting" | Laptop ke andar wala chhota offline dimaag jawab deta hai (thoda dheere) |
+| 25 | Phone: Rishu app → **Laptop ke bina chalao** → free Groq key daalo → "Kal subah 6 baje ka alarm lagao", "YouTube pe Kesariya chalao" | Phone khud kaam karta hai: alarm phone ki clock mein, YouTube khulta hai |
+| 26 | "Good morning Rishu" | Aaj ki classes, reminders, deadlines (aur mausam) ek saath |
+| 27 | Ek PDF Downloads mein rakho → "Downloads wali PDF ka summary do" | Short summary, key points |
+| 28 | "Downloads folder saaf karo" → plan sunao → "haan" → "undo karo" | Files type ke hisaab se folders mein; undo se wapas |
+| 29 | Word kholo, phir Rishu mein: "Word mein likh do: Respected Sir, …" | Text Word mein type ho jaata hai |
+| 30 | "Sharma Traders ke liye 15000 website design ka invoice banao, 18% GST" | Documents\Rishu mein numbered Word invoice, total shabdon mein |
+| 31 | Google Sheet ka link do → "Is sheet mein aaj ki attendance: roll 5 absent, baaki present" | Card mein har row → haan → sheet mein bhar jaata hai, Rishu check karke batata hai |
 | 17 | Settings → Suraksha: PIN set karo, phir bolo **"Rishu lock"** | Rishu turant lock; chat screen se hat jaati hai. PIN (ya Windows Hello / bolkar password) se unlock |
 
 ## Agar kuch gadbad ho
@@ -59,5 +67,6 @@
 "Rishu ek Hinglish-first personal AI assistant hai jo laptop par locally chalta
 hai. Aap bolo, Rishu samajhta hai, kaam karta hai, padhata hai, aur har zaroori
 kaam se pehle permission leta hai. Data aapke computer par encrypted rehta hai.
-Aage: Android app, face/fingerprint lock, memory, WhatsApp aur 'teach once'
-skills, aur khud ko naye kaam sikhane wala Self-Update Lab."
+Internet na ho to bhi laptop ke andar ka chhota offline dimaag kaam karta hai,
+aur Android app laptop ke saath ya akele (free Groq key se) chalti hai.
+Aage: face unlock, aur khud ko naye kaam sikhane wala Self-Update Lab."
