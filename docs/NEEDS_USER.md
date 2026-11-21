@@ -8,7 +8,9 @@ rahi hai: neeche wala kaam jab time mile tab kar dena.
 
 Aapne 10 page bheje the, unme se 6 mil gaye (sign-in, home, courses, course modules,
 meetings, attendance). Baaki 4 file **khaali (0 byte)** aayi, shayad upload beech mein
-ruk gaya. Ye page Chrome mein kholkar Ctrl+S → "Webpage, Single File" se save karke
+ruk gaya. 21 Nov ko dobara bheje gaye page bhi wahi 4 khaali file the. Tab tak
+**teach mode** se kaam chal jaayega: Rishu ki browser window mein ek baar marks
+chadhakar dikha do aur "Bas, ho gaya" bolo. Ye page Chrome mein kholkar Ctrl+S → "Webpage, Single File" se save karke
 chat mein dobara bhejo:
 
 1. Class ka **Assignments** tab (assignments ki list)

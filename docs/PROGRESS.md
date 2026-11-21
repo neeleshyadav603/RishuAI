@@ -4,7 +4,7 @@ Checkpoint file. Every session reads this first and updates it with every push.
 Rules for sessions are in `CLAUDE.md`.
 
 **Current phase:** Owner priorities of 2026-11-20 (see the next section; they come before the phase order)
-**Last updated:** 2026-11-20
+**Last updated:** 2026-11-21
 
 ## Owner priorities (2026-11-20) — work in this order, before the phase order
 
@@ -133,6 +133,9 @@ P8 — Teacher mode
       tables; python-docx, MIT), make_spreadsheet (.xlsx with header, sized
       columns, numbers kept numeric), files in Documents/Rishu, never
       overwritten; open_file opens documents and media but never programs.
+
+Release: P1–P8 shipped as **v0.5.0** (21 Nov 2026; Windows installer now
+bundles llama.cpp's CPU server, ≈47 MB).
 
 P9 — Android app
 - [ ] Talk to Rishu, reminders, open apps, WhatsApp on the phone; send a command
