@@ -1,7 +1,8 @@
 // The phone's own Rishu (Android, without the laptop): the same protocol as the
 // laptop core, answered on the phone. The brain is an online model (Groq,
 // Gemini, OpenRouter: the user's free keys, kept encrypted in the Android
-// Keystore); providers, model IDs and prompts come from assets/brain.json,
+// Keystore) and, without internet or a key, the small offline model on the
+// phone (phone_local.dart); providers, model IDs and prompts come from assets/brain.json,
 // generated from config/models.yaml. Phone actions use standard Android
 // intents. Calls and WhatsApp messages are only prepared: the user presses
 // the button. Actions that change something wait for the user's approval.
@@ -10,6 +11,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'connection.dart';
+import 'phone_local.dart';
 
 /// What the phone can do (Android intents); replaced by a fake in tests.
 abstract class PhoneActions {
@@ -73,13 +75,29 @@ class PhoneCore implements CoreConnection {
     required this.actions,
     Http? http,
     DateTime Function()? now,
+    LocalEngine? engine,
+    Downloader? downloader,
   })  : _http = http ?? realHttp,
         _now = now ?? DateTime.now {
     _settings = _loadJson('settings.json') ?? {};
     _memories = [for (final m in (_loadJsonList('memories.json') ?? const [])) '$m'];
     _tools = _buildTools();
+    local = PhoneLocalModel(
+      config: Map<String, dynamic>.from(brain['local_model'] as Map? ?? const {}),
+      folder: folder,
+      engine: engine ?? NoEngine(),
+      http: _http,
+      download: downloader ?? realDownload,
+    )..choice = '${_settings['local_model'] ?? ''}';
+    local.onChange = () {
+      if (_helloSent) _emit({'type': 'local_model', ...local.status()});
+    };
     Timer.run(_sendHello);
   }
+
+  /// The small offline model on the phone (used without internet or a key).
+  late final PhoneLocalModel local;
+  bool _helloSent = false;
 
   final Map<String, dynamic> brain;
   final Directory folder;
@@ -137,7 +155,7 @@ class PhoneCore implements CoreConnection {
         'persona': _settings['persona'] ?? 'professional',
         'address_as': _settings['address_as'] ?? '',
         'about_me': _settings['about_me'] ?? '',
-        'local_model': '',
+        'local_model': local.choice,
       };
 
   Map<String, dynamic> get _providerCfg => Map<String, dynamic>.from(brain['providers'] as Map? ?? {});
@@ -171,11 +189,13 @@ class PhoneCore implements CoreConnection {
   void _state(String state) => _emit({'type': 'state_change', 'state': state});
 
   Future<void> _sendHello() async {
+    final providers = await _providers();
+    await local.init(warm: !providers.any((p) => p['configured'] == true));
     _emit({
       'type': 'hello',
       'version': 'phone',
       'settings': settings,
-      'providers': await _providers(),
+      'providers': providers,
       'capabilities': {
         'step_up': false,
         'approval_timeout_seconds': 120,
@@ -184,8 +204,9 @@ class PhoneCore implements CoreConnection {
       },
       'lock': {'locked': false, 'pin_set': false, 'phrase_set': false, 'hello': false, 'idle_minutes': 0},
       'teach': {'recording': false, 'skills': []},
-      'local_model': {'engine': false, 'downloaded': false},
+      'local_model': local.status(),
     });
+    _helloSent = true;
     _state('idle');
   }
 
@@ -226,6 +247,11 @@ class PhoneCore implements CoreConnection {
       for (final entry in (body ?? const {}).entries) {
         if (settings.containsKey(entry.key)) _settings[entry.key] = entry.value;
       }
+      final choice = '${_settings['local_model'] ?? ''}';
+      if (choice.isNotEmpty && choice != local.choice) {
+        await local.stop();
+        local.choice = choice;
+      }
       _saveJson('settings.json', _settings);
       return {'settings': settings};
     }
@@ -244,13 +270,22 @@ class PhoneCore implements CoreConnection {
     }
     if (route == 'GET /v1/voice') return {'input': true, 'output': true};
     if (route == 'GET /v1/activity') return {'entries': List.of(_activity)};
-    if (route == 'GET /v1/local-model') return {'engine': false, 'downloaded': false};
+    if (route == 'GET /v1/local-model') return local.status();
+    if (route == 'POST /v1/local-model/download') {
+      unawaited(local.downloadModel());
+      return local.status();
+    }
+    if (route == 'DELETE /v1/local-model') {
+      await local.delete();
+      return local.status();
+    }
     throw const HttpException('Yeh laptop wale Rishu ka kaam hai (phone par nahi).');
   }
 
   @override
   Future<void> close() async {
     _stopped = true;
+    await local.stop();
     await _events.close();
   }
 
@@ -329,6 +364,35 @@ class PhoneCore implements CoreConnection {
         }
       }
     }
+    // No key, no internet or every online model busy: the offline model on the phone.
+    if (local.usable) {
+      final base = await local.ensure();
+      if (base != null) {
+        try {
+          final (status, text) = await _http(
+            'POST',
+            Uri.parse('$base/chat/completions'),
+            {'Content-Type': 'application/json'},
+            jsonEncode({
+              'model': 'local',
+              'messages': messages,
+              'tools': [for (final t in _tools.values) t.schema()],
+              'temperature': 0.6,
+            }),
+          );
+          if (status == 200) {
+            final data = jsonDecode(text) as Map<String, dynamic>;
+            final choice = (data['choices'] as List).first as Map<String, dynamic>;
+            return (Map<String, dynamic>.from(choice['message'] as Map), 'rishu_local', 'offline');
+          }
+          reasons.add('offline: $status');
+        } catch (e) {
+          reasons.add('offline: $e');
+        }
+      } else {
+        reasons.add('offline: ${local.error.isEmpty ? 'not ready' : local.error}');
+      }
+    }
     if (reasons.isEmpty) {
       throw const HttpException('NO_KEY');
     }
@@ -393,8 +457,8 @@ class PhoneCore implements CoreConnection {
         'type': 'error',
         'code': noKey ? 'no_brain' : 'llm_failed',
         'message': noKey
-            ? 'Phone par Rishu ke liye free Groq key chahiye: Settings → AI brain. (Ya laptop se jodo.)'
-            : 'AI se jawab nahi mila. Internet check karo. (${e.message})',
+            ? 'Phone par Rishu ke liye free Groq key daalo (Settings → AI brain) ya Offline dimaag download karo (Settings → Offline dimaag). Laptop se bhi jod sakte ho.'
+            : 'AI se jawab nahi mila. Internet check karo, ya Settings mein Offline dimaag taiyaar karo. (${e.message})',
       });
     } catch (e) {
       _emit({'type': 'error', 'code': 'llm_failed', 'message': 'Kuch gadbad ho gayi: $e'});

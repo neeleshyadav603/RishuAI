@@ -59,7 +59,9 @@ Rishu is a voice-first personal AI assistant for Windows and Android.
 3. Permission-first: every action goes through the permission engine (R0–R3).
    Rishu never completes payments.
 4. Privacy: personal data stays local and encrypted; telemetry off by default.
-5. Android: single arm64 APK ≤ 30 MB, no bundled ML models.
+5. Android: the main arm64 APK ≤ 30 MB with no bundled ML model (its offline
+   model is downloaded once inside the app). Owner's decision (22 Nov 2026):
+   a second "offline" APK also ships, with the small model inside.
    Windows: single per-user installer.
 6. Never hard-code LLM model IDs in code. They live in `config/models.yaml`
    and are checked against each provider's `/models` list.

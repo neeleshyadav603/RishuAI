@@ -21,3 +21,7 @@ app/.flutter-plugins-dependencies
 *.log
 *.spec
 dist-installer/
+# Built in CI, never committed: the phone's offline engine and the bundled model
+app/android/app/src/main/jniLibs/
+app/android/app/src/main/assets/models/
+*.gguf

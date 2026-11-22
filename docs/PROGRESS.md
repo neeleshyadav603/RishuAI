@@ -179,6 +179,25 @@ with Groq/free keys (no model on the phone), remaining P9/P10 items, one release
       and the phone brain when not (after pairing). LMS, sheets, Word/Excel,
       teach mode and the lock stay laptop features (said in Settings).
 
+Owner request (22 Nov 2026, morning): an offline model on Android too, and a
+final APK. Owner chose both APKs (AskUserQuestion answer "3"):
+- [x] Phone offline brain: llama.cpp's server compiled for arm64 in CI (NDK,
+      static, two builds: ARMv8.2 dot-product and plain ARMv8, chosen by
+      /proc/cpuinfo), packed as `lib/arm64-v8a/libllama_server*.so` so Android
+      installs it as an executable; run as a child process on 127.0.0.1
+      (`MainActivity.kt`); `app/lib/core/phone_local.dart` picks, downloads
+      (resumable, size + SHA-256 checked) or copies the model, starts the
+      server and waits for /health. The phone brain uses it when there is no
+      key, no internet or every online model fails. Settings → Offline dimaag
+      on the phone; onboarding offers it. Android 9+ only (API 28 build).
+- [x] Two APKs per release: `Rishu-x.y.z-android-arm64.apk` (≤ 30 MB, model
+      downloaded once, ~430 MB) and `Rishu-x.y.z-android-arm64-offline.apk`
+      (model inside, works offline from the first start; ~0.9 GB of phone
+      storage because llama.cpp needs the model as a real file, so it is
+      copied out of the APK once). Same version code, so either replaces the other.
+- Needs device test: engine start and speed on a real phone, RAM on 4 GB
+  phones, the copy on first start of the offline APK.
+
 Release: everything above (bundled offline model, phone without the laptop,
 P10 work tools, Google Sheets, grading) ships together as **v0.7.0** (21 Nov 2026),
 as the owner asked ("sab kuch ek saath").

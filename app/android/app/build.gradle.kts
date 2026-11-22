@@ -51,6 +51,17 @@ android {
         }
     }
 
+    // The offline engine is an executable packed as lib*.so: it must be extracted
+    // on install. The model file (offline APK only) is stored uncompressed.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+    androidResources {
+        noCompress += listOf("gguf")
+    }
+
     buildTypes {
         release {
             signingConfig =

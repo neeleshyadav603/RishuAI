@@ -87,7 +87,7 @@ local_model:
   ctx_size: 6144
   choices:
     small:
-      label: "Chhota: Qwen3 0.6B (about 0.5-0.7 GB, 4 GB RAM laptops)"
+      label: "Chhota: Qwen3 0.6B (about 0.5 GB, 4 GB RAM)"
       repo: ggml-org/Qwen3-0.6B-GGUF
       # Preferred quantisation; if the repo does not publish it, the next of
       # Q4_K_S, Q4_0, Q5_K_M, Q5_0, Q6_K, Q8_0 that it has is used.

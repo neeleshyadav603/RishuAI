@@ -97,4 +97,37 @@ class PhoneDevice {
         if (c is Map) {'name': '${c['name'] ?? ''}', 'number': '${c['number'] ?? ''}'}
     ];
   }
+
+  // ---- offline brain (llama.cpp server on the phone) --------------------------------
+
+  static Future<Map<String, dynamic>> localEngine() async {
+    try {
+      return Map<String, dynamic>.from(await _channel.invokeMethod<Map<Object?, Object?>>('localEngine') ?? const {});
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  static Future<List<String>> bundledModels() async {
+    try {
+      return [for (final m in await _channel.invokeMethod<List<Object?>>('bundledModels') ?? const []) '$m'];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static Future<bool> copyBundled(String name, String dest) =>
+      _ok('copyBundled', {'name': name, 'dest': dest});
+
+  static Future<String?> sha256File(String path) => _channel.invokeMethod<String>('sha256', {'path': path});
+
+  static Future<bool> startLocal(String model, int port, int ctx) =>
+      _ok('startLocal', {'model': model, 'port': port, 'ctx': ctx});
+
+  static Future<void> stopLocal() async {
+    await _channel.invokeMethod('stopLocal');
+  }
+
+  static Future<bool> localRunning() => _ok('localRunning');
 }
+

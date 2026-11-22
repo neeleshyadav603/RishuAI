@@ -265,13 +265,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: tr(c, 'Phone se jodo', 'Phone link'),
           children: [PhoneLinkSettings(controller: c)],
         ),
-        // The phone's own brain is online only; offline model, teach mode and the lock live on the laptop.
+        _Section(
+          icon: Icons.offline_bolt_rounded,
+          title: tr(c, 'Offline dimaag', 'Offline brain'),
+          children: [OfflineModelSettings(controller: c)],
+        ),
+        // Teach mode and the lock live on the laptop.
         if (!c.onPhoneBrain) ...[
-          _Section(
-            icon: Icons.offline_bolt_rounded,
-            title: tr(c, 'Offline dimaag', 'Offline brain'),
-            children: [OfflineModelSettings(controller: c)],
-          ),
           _Section(
             icon: Icons.school_rounded,
             title: tr(c, 'Seekhe hue kaam', 'Taught tasks'),

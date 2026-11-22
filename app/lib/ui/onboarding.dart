@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../core/connection.dart';
 import '../state/assistant.dart';
 import 'chat.dart' show tr;
+import 'offline.dart';
 import 'orb.dart';
 import 'settings.dart' show LanguagePicker, keyProblem;
 import 'theme.dart';
@@ -262,12 +263,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               style: TextStyle(color: _keyOk ? RishuColors.green : RishuColors.amber, fontSize: 14)),
         ],
         const SizedBox(height: 10),
-        _body(tr(c, '🔒 Key sirf is computer par, Windows ke secure store mein encrypted rehti hai.',
-            '🔒 The key stays on this computer, encrypted in the Windows secure store.')),
+        _body(c.onPhone
+            ? tr(c, '🔒 Key sirf is phone par, Android Keystore se encrypted rehti hai.',
+                '🔒 The key stays on this phone, encrypted with the Android Keystore.')
+            : tr(c, '🔒 Key sirf is computer par, Windows ke secure store mein encrypted rehti hai.',
+                '🔒 The key stays on this computer, encrypted in the Windows secure store.')),
         if (c.localModel.downloaded) ...[
           const SizedBox(height: 6),
-          _body(tr(c, '💡 Key ke bina bhi Rishu chalegi: laptop par chhota offline dimaag hai (dheema aur simple). Key ke saath tez aur zyada samajhdaar.',
-              '💡 Rishu also works without a key: a small offline brain runs on this laptop (slower, simpler). With a key it is faster and smarter.')),
+          _body(tr(c, '💡 Key ke bina bhi Rishu chalegi: ${c.onPhone ? 'phone' : 'laptop'} par chhota offline dimaag hai (dheema aur simple). Key ke saath tez aur zyada samajhdaar.',
+              '💡 Rishu also works without a key: a small offline brain runs on this ${c.onPhone ? 'phone' : 'laptop'} (slower, simpler). With a key it is faster and smarter.')),
+        ] else if (c.onPhone && c.localModel.engine) ...[
+          const SizedBox(height: 10),
+          OfflineModelSettings(controller: c),
         ],
         const SizedBox(height: 22),
         Row(

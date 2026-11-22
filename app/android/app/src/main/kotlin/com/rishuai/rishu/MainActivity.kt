@@ -6,7 +6,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.AlarmClock
 import android.provider.ContactsContract
 import android.security.keystore.KeyGenParameterSpec
@@ -20,7 +23,9 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 import java.security.KeyStore
+import java.security.MessageDigest
 import java.util.Locale
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -34,9 +39,16 @@ import javax.crypto.spec.GCMParameterSpec
  * (alarm, timer, open an app or link, dialer, WhatsApp chat with text typed,
  * contacts lookup); the app storage folder and a Wi-Fi multicast lock.
  * Calls and WhatsApp messages are never sent by Rishu: the user presses the button.
+ *
+ * Offline brain: llama.cpp's server (MIT), built for arm64 in CI and packed as
+ * lib/arm64-v8a/libllama_server*.so so Android installs it as an executable
+ * file; it runs as a child process on 127.0.0.1 with a model from the app's
+ * own folder (downloaded once, or copied from the "offline" APK's assets).
  */
 class MainActivity : FlutterActivity() {
     private var recognizer: SpeechRecognizer? = null
+    private var localProcess: Process? = null
+    private val main = Handler(Looper.getMainLooper())
     private var tts: TextToSpeech? = null
     private var ttsReady = false
     private var pendingListen: Pair<MethodCall, MethodChannel.Result>? = null
@@ -94,9 +106,121 @@ class MainActivity : FlutterActivity() {
                     if (launch == null) result.success(false) else start(launch, result)
                 }
                 "findContact" -> findContact(call, result)
+                "localEngine" -> result.success(localEngine())
+                "bundledModels" -> result.success(
+                    (try { assets.list("models")?.toList() } catch (e: Exception) { null } ?: emptyList())
+                        .filter { it.endsWith(".gguf") }
+                )
+                "copyBundled" -> background(result) {
+                    val dest = File(call.argument<String>("dest") ?: "")
+                    dest.parentFile?.mkdirs()
+                    assets.open("models/" + (call.argument<String>("name") ?: "")).use { input ->
+                        dest.outputStream().use { input.copyTo(it, 1 shl 20) }
+                    }
+                    true
+                }
+                "sha256" -> background(result) {
+                    val digest = MessageDigest.getInstance("SHA-256")
+                    File(call.argument<String>("path") ?: "").inputStream().use { input ->
+                        val buffer = ByteArray(1 shl 20)
+                        while (true) {
+                            val n = input.read(buffer)
+                            if (n < 0) break
+                            digest.update(buffer, 0, n)
+                        }
+                    }
+                    digest.digest().joinToString("") { "%02x".format(it) }
+                }
+                "startLocal" -> result.success(startLocal(call))
+                "stopLocal" -> {
+                    stopLocal()
+                    result.success(true)
+                }
+                "localRunning" -> result.success(localAlive())
                 else -> result.notImplemented()
             }
         }
+    }
+
+    // ---- offline brain ------------------------------------------------------------------
+
+    /** Runs slow work off the main thread and answers on it. */
+    private fun background(result: MethodChannel.Result, work: () -> Any?) {
+        Thread {
+            try {
+                val value = work()
+                main.post { result.success(value) }
+            } catch (e: Exception) {
+                main.post { result.error("failed", e.message ?: e.toString(), null) }
+            }
+        }.start()
+    }
+
+    /** The server build that suits this phone's CPU (dot-product instructions or plain ARMv8). */
+    private fun localEngine(): Map<String, Any?> {
+        if (Build.VERSION.SDK_INT < 28) return mapOf("path" to null, "reason" to "android_too_old")
+        val dir = applicationInfo.nativeLibraryDir
+        val features = try {
+            File("/proc/cpuinfo").readLines().firstOrNull { it.startsWith("Features") } ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+        val fast = File(dir, "libllama_server.so")
+        val plain = File(dir, "libllama_server_v8.so")
+        val chosen = when {
+            features.contains("asimddp") && fast.exists() -> fast
+            plain.exists() -> plain
+            else -> null
+        }
+        return mapOf(
+            "path" to chosen?.absolutePath,
+            "reason" to if (chosen == null) "no_engine" else "",
+            "cores" to Runtime.getRuntime().availableProcessors(),
+        )
+    }
+
+    private fun startLocal(call: MethodCall): Boolean {
+        stopLocal()
+        val server = localEngine()["path"] as String? ?: return false
+        val threads = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(2, 4)
+        val command = listOf(
+            server,
+            "-m", call.argument<String>("model") ?: return false,
+            "--host", "127.0.0.1",
+            "--port", (call.argument<Int>("port") ?: 47911).toString(),
+            "-c", (call.argument<Int>("ctx") ?: 6144).toString(),
+            "-t", threads.toString(),
+            "-ngl", "0",
+            "--jinja",
+            "--reasoning-format", "deepseek",
+            "--chat-template-kwargs", "{\"enable_thinking\": false}",
+        )
+        return try {
+            localProcess = ProcessBuilder(command)
+                .directory(filesDir)
+                .redirectErrorStream(true)
+                .redirectOutput(File(filesDir, "llama-server.log"))
+                .start()
+            true
+        } catch (e: Exception) {
+            File(filesDir, "llama-server.log").writeText("could not start: $e")
+            false
+        }
+    }
+
+    private fun localAlive(): Boolean {
+        val process = localProcess ?: return false
+        return try {
+            process.exitValue()
+            false
+        } catch (e: IllegalThreadStateException) {
+            true
+        }
+    }
+
+    private fun stopLocal() {
+        localProcess?.destroy()
+        localProcess = null
     }
 
     private fun start(intent: Intent, result: MethodChannel.Result) {
@@ -280,6 +404,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        stopLocal()
         recognizer?.destroy()
         tts?.shutdown()
         setMulticast(false)

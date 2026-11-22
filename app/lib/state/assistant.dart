@@ -9,6 +9,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../core/connection.dart';
 import '../core/device.dart';
 import '../core/phone_core.dart';
+import '../core/phone_local.dart';
 import '../core/remote.dart';
 
 enum Phase { booting, failed, onboarding, ready, pairing }
@@ -184,8 +185,10 @@ class LocalModelInfo {
         done = (((e?['progress'] as Map?)?['done'] as num?) ?? 0).toInt(),
         total = (((e?['progress'] as Map?)?['total'] as num?) ?? 0).toInt(),
         downloading = e?['progress'] is Map,
+        bundled = e?['bundled'] == true,
         error = '${e?['error'] ?? ''}';
   final bool engine;
+  final bool bundled; // the offline APK carries the model (copied out once)
   final String choice;
   final Map<String, String> choices;
   final bool downloaded;
@@ -247,6 +250,29 @@ class _AndroidActions implements PhoneActions {
   Future<List<Map<String, String>>> findContact(String name) => PhoneDevice.findContact(name);
 }
 
+/// The phone's offline engine through the platform channel.
+class _AndroidEngine implements LocalEngine {
+  @override
+  Future<({String? path, String reason})> engine() async {
+    final e = await PhoneDevice.localEngine();
+    final path = e['path'];
+    return (path: path is String && path.isNotEmpty ? path : null, reason: '${e['reason'] ?? 'no_engine'}');
+  }
+
+  @override
+  Future<List<String>> bundledModels() => PhoneDevice.bundledModels();
+  @override
+  Future<bool> copyBundled(String name, String dest) => PhoneDevice.copyBundled(name, dest);
+  @override
+  Future<String?> sha256(String path) => PhoneDevice.sha256File(path);
+  @override
+  Future<bool> start(String model, int port, int ctx) => PhoneDevice.startLocal(model, port, ctx);
+  @override
+  Future<void> stop() => PhoneDevice.stopLocal();
+  @override
+  Future<bool> running() => PhoneDevice.localRunning();
+}
+
 /// Which Rishu the phone uses: 'laptop' (paired laptop) or 'phone' (its own online brain).
 class PhoneMode {
   PhoneMode(this.folder);
@@ -269,7 +295,13 @@ class PhoneMode {
 Future<CoreConnection> openPhoneCore() async {
   final folder = Directory(await PhoneDevice.filesDir());
   final brain = jsonDecode(await rootBundle.loadString('assets/brain.json')) as Map<String, dynamic>;
-  return PhoneCore(brain: brain, folder: Directory('${folder.path}${Platform.pathSeparator}phone'), secrets: _KeystoreSecrets(), actions: _AndroidActions());
+  return PhoneCore(
+    brain: brain,
+    folder: Directory('${folder.path}${Platform.pathSeparator}phone'),
+    secrets: _KeystoreSecrets(),
+    actions: _AndroidActions(),
+    engine: _AndroidEngine(),
+  );
 }
 
 /// Android: the paired laptop's Rishu over the home Wi-Fi, or the phone's own

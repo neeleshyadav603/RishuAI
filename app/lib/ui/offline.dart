@@ -24,14 +24,19 @@ class OfflineModelSettings extends StatelessWidget {
     const muted = TextStyle(color: RishuColors.muted, fontSize: 13);
     if (!m.engine) {
       return Text(
-        tr(c, 'Is build mein offline engine nahi hai. Ollama install karke bhi offline chala sakte ho.',
-            'This build has no offline engine. Ollama also works for offline use.'),
+        c.onPhone
+            ? tr(c, 'Is phone par offline dimaag nahi chal sakta (Android 9+ aur 64-bit phone chahiye). Groq key se chalao.',
+                'The offline brain cannot run on this phone (needs Android 9+ and a 64-bit phone). Use a Groq key.')
+            : tr(c, 'Is build mein offline engine nahi hai. Ollama install karke bhi offline chala sakte ho.',
+                'This build has no offline engine. Ollama also works for offline use.'),
         style: muted,
       );
     }
+    final percent = (m.fraction * 100).toStringAsFixed(0);
     final status = m.downloading
-        ? tr(c, 'Download ho raha hai… ${(m.fraction * 100).toStringAsFixed(0)}%',
-            'Downloading… ${(m.fraction * 100).toStringAsFixed(0)}%')
+        ? (m.bundled
+            ? tr(c, 'Offline dimaag taiyaar ho raha hai… $percent%', 'Getting the offline brain ready… $percent%')
+            : tr(c, 'Download ho raha hai… $percent%', 'Downloading… $percent%'))
         : m.downloaded
             ? (m.running
                 ? tr(c, 'Taiyaar aur chal raha hai', 'Ready and running')
@@ -41,8 +46,11 @@ class OfflineModelSettings extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          tr(c, 'Bina internet, bina key, bina limit: laptop par chalne wala chhota dimaag. Online wale se dheema aur simple hai, isliye ye backup hai.',
-              'No internet, no key, no limit: a small brain on this laptop. Slower and simpler than online models, so it is the backup.'),
+          c.onPhone
+              ? tr(c, 'Bina internet, bina key: phone par chalne wala chhota dimaag (alarm, apps, notes, simple sawaal). Online wale se dheema aur kam samajhdaar hai; Wi-Fi par ek baar download karo.',
+                  'No internet, no key: a small brain on this phone (alarms, apps, notes, simple questions). Slower and simpler than online models; download it once on Wi-Fi.')
+              : tr(c, 'Bina internet, bina key, bina limit: laptop par chalne wala chhota dimaag. Online wale se dheema aur simple hai, isliye ye backup hai.',
+                  'No internet, no key, no limit: a small brain on this laptop. Slower and simpler than online models, so it is the backup.'),
           style: muted,
         ),
         const SizedBox(height: 10),
@@ -90,7 +98,9 @@ class OfflineModelSettings extends StatelessWidget {
                 key: const ValueKey('local-download'),
                 onPressed: m.downloading ? null : () => _run(context, c.downloadLocalModel),
                 icon: const Icon(Icons.download_rounded),
-                label: Text(tr(c, 'Download (${m.sizeMb} MB)', 'Download (${m.sizeMb} MB)')),
+                label: Text(m.bundled && m.choice == 'small'
+                    ? tr(c, 'Taiyaar karo', 'Get it ready')
+                    : tr(c, 'Download (${m.sizeMb} MB)', 'Download (${m.sizeMb} MB)')),
               )
             else
               TextButton.icon(

@@ -15,16 +15,20 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "app" / "assets" / "brain.json"
+sys.path.insert(0, str(ROOT / "core"))
+
+from rishu_core.llm.local import QUANTS
 
 
 def build() -> str:
     models = yaml.safe_load((ROOT / "config" / "models.yaml").read_text(encoding="utf-8"))
     prompts = ROOT / "shared" / "prompts"
+    local = models.get("local_model") or {}
     providers = {}
     for name in models["order"]:
         cfg = models["providers"].get(name) or {}
         if cfg.get("local") or cfg.get("managed"):
-            continue  # the phone has no local model: online providers only
+            continue  # online providers here; the phone's offline model is under "local_model"
         providers[name] = {
             "label": cfg.get("label") or name,
             "key_url": cfg.get("key_url") or "",
@@ -36,6 +40,21 @@ def build() -> str:
         "order": list(providers),
         "providers": providers,
         "speech": models.get("speech", {}),
+        # The phone's offline brain (llama.cpp on the phone): same choices as the laptop.
+        "local_model": {
+            "default": local.get("default", "small"),
+            "ctx_size": int(local.get("ctx_size", 6144)),
+            "quants": list(QUANTS),
+            "choices": {
+                name: {
+                    "label": str(choice.get("label", name)),
+                    "repo": str(choice["repo"]),
+                    "file_suffix": str(choice.get("file_suffix", "")),
+                    "size_mb": int(choice.get("size_mb", 0)),
+                }
+                for name, choice in (local.get("choices") or {}).items()
+            },
+        },
         "prompts": {
             "persona": (prompts / "persona_rishu.md").read_text(encoding="utf-8").strip(),
             "personas": {p.stem: p.read_text(encoding="utf-8").strip() for p in sorted((prompts / "personas").glob("*.md"))},
