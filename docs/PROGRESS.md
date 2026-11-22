@@ -197,6 +197,8 @@ final APK. Owner chose both APKs (AskUserQuestion answer "3"):
       copied out of the APK once). Same version code, so either replaces the other.
 - Needs device test: engine start and speed on a real phone, RAM on 4 GB
   phones, the copy on first start of the offline APK.
+- First CI build: small APK 23 MB, offline APK 432 MB, engine llama.cpp b12627
+  (15 MB per build, PIE, only system libraries). Released as **v0.8.0**.
 
 Release: everything above (bundled offline model, phone without the laptop,
 P10 work tools, Google Sheets, grading) ships together as **v0.7.0** (21 Nov 2026),

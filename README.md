@@ -17,8 +17,10 @@ key (console.groq.com). Without a key or internet, the small offline model
 inside the installer still answers simple requests. The installer is about
 0.5 GB because that model is inside it.
 
-Android: get the `.apk` from the same Release. Pair it with the laptop, or
-choose "Laptop ke bina chalao" and add a free Groq key on the phone.
+Android: get one APK from the same Release. `…-android-arm64.apk` is small
+(the offline brain is downloaded once in Settings); `…-android-arm64-offline.apk`
+has the offline brain inside. Pair it with the laptop, or choose "Laptop ke bina
+chalao" and use the offline brain and/or a free Groq key on the phone.
 
 Demo script: [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) · Progress: [docs/PROGRESS.md](docs/PROGRESS.md)
 
@@ -45,7 +47,7 @@ Demo script: [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) · Progress: [docs/PROGRES
 | WhatsApp | "Shruti ko bolo aaj nahi aa sakta" — sent in WhatsApp Desktop after your "haan" |
 | Teacher | Timetable with lecture reminders; notes, question papers, quizzes (Word), result sheets (Excel) |
 | Offline brain | A small model is inside the installer: Rishu answers without internet or a key (slower, simple tasks) |
-| Android | Pairs with the laptop's Rishu (same Wi-Fi, encrypted), or works on its own with a free Groq key: alarms, timers, apps, YouTube, WhatsApp, search, weather |
+| Android | Pairs with the laptop's Rishu (same Wi-Fi, encrypted), or works on its own with a free Groq key or the offline brain on the phone: alarms, timers, apps, YouTube, WhatsApp, search, weather |
 | Everyday work | PDF/Word/Excel/PowerPoint summaries, tidy Downloads (with undo), dictation into any app, morning briefing, meeting notes, LinkedIn drafts |
 | Freelancing | Invoices with GST and amount in words, deadlines with reminders, proposals as Word files |
 | Google Sheets | Read and fill attendance or marks in a Google Sheet by name or roll number (checked after writing) |

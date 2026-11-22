@@ -41,6 +41,7 @@
 | 23 | Laptop: Settings → **Phone se jodo** → code. Phone: Rishu app → code daalo → **Jodo** → phone par bolo "Aaj kaunsi class hai?" | Laptop wala Rishu jawab deta hai, phone bolkar sunata hai |
 | 24 | Wi-Fi band karo (ya koi key mat daalo) → "Time kya hua hai?" / "Note likho: kal 10 baje meeting" | Laptop ke andar wala chhota offline dimaag jawab deta hai (thoda dheere) |
 | 25 | Phone: Rishu app → **Laptop ke bina chalao** → free Groq key daalo → "Kal subah 6 baje ka alarm lagao", "YouTube pe Kesariya chalao" | Phone khud kaam karta hai: alarm phone ki clock mein, YouTube khulta hai |
+| 25b | Phone par offline APK, **flight mode ON** → "Kal subah 6 baje ka alarm lagao" / "Ek joke sunao" | Phone ka apna offline dimaag jawab deta hai (pehla jawab 10–30 sec) |
 | 26 | "Good morning Rishu" | Aaj ki classes, reminders, deadlines (aur mausam) ek saath |
 | 27 | Ek PDF Downloads mein rakho → "Downloads wali PDF ka summary do" | Short summary, key points |
 | 28 | "Downloads folder saaf karo" → plan sunao → "haan" → "undo karo" | Files type ke hisaab se folders mein; undo se wapas |
